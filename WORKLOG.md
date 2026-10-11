@@ -58,3 +58,26 @@ Hank voice (plain-spoken, farming/trucks, dry deadpan) meaningfully different fr
 Alex.exe voice (buzzword-dense, AI/startups), each stamped `creator_prompt_v1` +
 model; `npm run build` OK. Dev DB cleaned after check.
 **Commit:** Sprint 1.2 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 1.3 — Creator Memory
+
+**Plan:** Structured creator memory before any RAG (guide Phase 3); generation
+retrieves stored facts (roadmap 1.3).
+**Scope:** `CreatorMemory` model (arch §9 fields + 7 memory types), memory CRUD
+(`POST/GET/DELETE /api/creators/{id}/memories`, type filter, importance sort,
+400 on bad type/range, 404 on cross-creator), memory injection into generation
+(appended to frozen `creator_prompt_v1` as canon context; templates untouched),
+stub replays recalled facts, seeded Hank/Alex.exe memories, frontend memory panel.
+Out of scope: embeddings/RAG (explicitly deferred per guide §5).
+**Implement:** `models/creator_memory.py`, memory endpoints + `memories_used` in
+generate response, `services/creator_service.py` (`retrieve_memories`,
+`build_system_prompt`), `providers/base` + `stub` memory recall, seed
+`SEED_MEMORIES`, frontend memory panel (list/add/delete, importance input).
+**Verify:** `pytest` → **41 passed** (14 new memory tests incl. roadmap two-pass
+check: generate (no memory) → store CANON fact → generate again → fact appears
+in text + `memories_used`); seed idempotent (8 memories created → updated); live
+generation used all 4 Hank memories sorted by importance; `npm run build` OK.
+Dev DB cleaned after check.
+**Commit:** Sprint 1.3 commit + push to `main`.

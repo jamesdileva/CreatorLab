@@ -37,6 +37,8 @@ Copy `.env.example` to `.env` and fill in values. Never commit `.env`.
 ## MVP scope
 
 - 2 fictional creators: Hank, Alex.exe (see `docs/creator-specs/`)
+- Versioned creator prompts (`creator_prompt_v1`, frozen) + `LLMProvider` abstraction
+- Structured creator memory (canon/events/jokes) injected into generation
 - YouTube Shorts, original episodic content
 - 25-viewer synthetic audience, ranking before absolute prediction
 - Human approval required for all publishes

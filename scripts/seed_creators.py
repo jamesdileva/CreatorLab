@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 from app.core.database import Base, SessionLocal, engine  # noqa: E402
 from app.models.creator import Creator  # noqa: E402
+from app.models.creator_memory import CreatorMemory, MemoryType  # noqa: E402
 
 SAFETY = (
     "Fictional character only; never impersonate real people. "
@@ -55,22 +56,78 @@ ALEX = {
 }
 
 
-def upsert(db, data: dict) -> str:
+SEED_MEMORIES: dict[str, list[tuple[MemoryType, str, float]]] = {
+    "hank": [
+        (MemoryType.CANON, "Hank owns Old Red, a battered but reliable tractor.", 0.9),
+        (MemoryType.PREFERENCE, "Hank hates unnecessary subscriptions.", 0.7),
+        (MemoryType.RUNNING_JOKE, "Hank claims Old Red is smarter than any AI.", 0.5),
+        (
+            MemoryType.CANON,
+            "Hank accidentally met Alex.exe and promised never to buy an AI tractor.",
+            0.9,
+        ),
+    ],
+    "alex-exe": [
+        (MemoryType.RELATIONSHIP, "Alex.exe believes Hank is an untapped market.", 0.8),
+        (
+            MemoryType.RUNNING_JOKE,
+            "Alex.exe calls his dashboards 'a single pane of glass'.",
+            0.5,
+        ),
+        (MemoryType.PREFERENCE, "Alex.exe prefers automation over manual work.", 0.7),
+        (MemoryType.EVENT, "Alex.exe once tried to optimize Hank's feeding schedule.", 0.6),
+    ],
+}
+
+
+def upsert(db, data: dict) -> Creator:
     existing = db.query(Creator).filter_by(slug=data["slug"]).first()
     if existing is None:
-        db.add(Creator(**data, active=True))
-        return f"created {data['slug']}"
+        creator = Creator(**data, active=True)
+        db.add(creator)
+        db.flush()
+        return creator
     for key, value in data.items():
         setattr(existing, key, value)
     existing.active = True
-    return f"updated {data['slug']}"
+    return existing
+
+
+def upsert_memory(
+    db, creator_id: int, type_: MemoryType, content: str, importance: float
+) -> str:
+    existing = (
+        db.query(CreatorMemory)
+        .filter_by(creator_id=creator_id, content=content)
+        .one_or_none()
+    )
+    if existing is None:
+        db.add(
+            CreatorMemory(
+                creator_id=creator_id, type=type_, content=content, importance=importance
+            )
+        )
+        return f"+ memory {content[:48]!r}"
+    existing.type = type_
+    existing.importance = importance
+    return f"~ memory {content[:48]!r}"
 
 
 def main() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        results = [upsert(db, HANK), upsert(db, ALEX)]
+        hank = upsert(db, HANK)
+        db.flush()
+        alex = upsert(db, ALEX)
+        db.flush()
+        creators = {"hank": hank, "alex-exe": alex}
+        results = []
+        for slug, memories in SEED_MEMORIES.items():
+            for type_, content, importance in memories:
+                results.append(
+                    upsert_memory(db, creators[slug].id, type_, content, importance)
+                )
         db.commit()
     finally:
         db.close()

@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
+  createMemory,
+  deleteMemory,
   generateCreatorVoice,
   getCreator,
+  listMemories,
   updateCreator,
 } from "../services/creators";
-import type { Creator, CreatorVoice } from "../types/creator";
+import { MEMORY_TYPES } from "../types/creator";
+import type { Creator, CreatorMemory, CreatorVoice } from "../types/creator";
 
 const csv = (xs: string[]) => xs.join(", ");
 const uncsv = (s: string) =>
@@ -27,6 +31,10 @@ export default function CreatorDetail() {
   const [voice, setVoice] = useState<CreatorVoice | null>(null);
   const [voiceError, setVoiceError] = useState("");
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const [memories, setMemories] = useState<CreatorMemory[] | null>(null);
+  const [memType, setMemType] = useState<string>("CANON");
+  const [memContent, setMemContent] = useState("");
+  const [memImportance, setMemImportance] = useState("0.5");
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +49,43 @@ export default function CreatorDetail() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : "load failed"));
   }, [id]);
+
+  const refreshMemories = async (creatorId: number) => {
+    listMemories(creatorId)
+      .then(setMemories)
+      .catch(() => setMemories([]));
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    void refreshMemories(Number(id));
+  }, [id]);
+
+  const onCreateMemory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creator) return;
+    createMemory(creator.id, {
+      type: memType,
+      content: memContent,
+      importance: Number(memImportance),
+    })
+      .then(() => {
+        setMemContent("");
+        void refreshMemories(creator.id);
+      })
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "memory create failed")
+      );
+  };
+
+  const onDeleteMemory = (memoryId: number) => {
+    if (!creator) return;
+    deleteMemory(creator.id, memoryId)
+      .then(() => void refreshMemories(creator.id))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "memory delete failed")
+      );
+  };
 
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,8 +239,66 @@ export default function CreatorDetail() {
             provider: {voice.provider} · model: {voice.model} · prompt:{" "}
             {voice.prompt_version}
           </small>
+          {voice.memories_used.length > 0 && (
+            <>
+              <br />
+              <small>
+                memories used: {voice.memories_used.length} (see panel below)
+              </small>
+            </>
+          )}
         </div>
       )}
+
+      <h2>Memory (Sprint 1.3)</h2>
+      {memories === null ? (
+        <p>loading memories…</p>
+      ) : (
+        <ul>
+          {memories.map((m) => (
+            <li key={m.id}>
+              <strong>{m.type}</strong> · importance {m.importance.toFixed(2)}
+              <br />
+              {m.content}{" "}
+              <button onClick={() => onDeleteMemory(m.id)}>delete</button>
+            </li>
+          ))}
+          {memories.length === 0 && <li>(no memories stored yet)</li>}
+        </ul>
+      )}
+      <form onSubmit={(e) => void onCreateMemory(e)}>
+        <select
+          value={memType}
+          onChange={(e) => setMemType(e.target.value)}
+        >
+          {MEMORY_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>{" "}
+        <input
+          value={memContent}
+          onChange={(e) => setMemContent(e.target.value)}
+          placeholder="fact, event, joke…"
+          style={{ width: "55%" }}
+          required
+        />{" "}
+        <input
+          type="number"
+          min={0}
+          max={1}
+          step={0.1}
+          value={memImportance}
+          onChange={(e) => setMemImportance(e.target.value)}
+          style={{ width: 64 }}
+        />{" "}
+        <button type="submit">store</button>
+      </form>
+      <p style={{ fontSize: 12, color: "#555" }}>
+        Stored facts are injected into generation (most important first, up to 10)
+        so the creator remembers its fictional history.
+      </p>
     </main>
   );
 }

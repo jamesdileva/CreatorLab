@@ -17,6 +17,35 @@ export interface Creator {
   updated_at: string;
 }
 
+export type MemoryTypeName =
+  | "CANON"
+  | "EVENT"
+  | "PREFERENCE"
+  | "RELATIONSHIP"
+  | "RUNNING_JOKE"
+  | "CONTENT_LESSON"
+  | "AUDIENCE_DISCOVERY";
+
+export const MEMORY_TYPES: MemoryTypeName[] = [
+  "CANON",
+  "EVENT",
+  "PREFERENCE",
+  "RELATIONSHIP",
+  "RUNNING_JOKE",
+  "CONTENT_LESSON",
+  "AUDIENCE_DISCOVERY",
+];
+
+export interface CreatorMemory {
+  id: number;
+  creator_id: number;
+  type: MemoryTypeName;
+  content: string;
+  importance: number;
+  confidence: number;
+  created_at: string;
+}
+
 export interface CreatorVoice {
   creator_id: number;
   creator_name: string;
@@ -24,6 +53,7 @@ export interface CreatorVoice {
   model: string;
   prompt_version: string;
   provider: string;
+  memories_used: string[];
 }
 
 export interface CreatorCreate {

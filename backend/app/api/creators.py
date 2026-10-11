@@ -15,6 +15,7 @@ from ..ai.prompts import get_prompt_versions
 from ..ai.providers import ProviderError
 from ..core.database import get_db
 from ..models.creator import Creator
+from ..models.creator_memory import CreatorMemory, MemoryType
 from ..services.creator_service import generate_creator_response
 
 router = APIRouter(prefix="/api/creators", tags=["creators"])
@@ -181,6 +182,7 @@ class GenerateOut(BaseModel):
     model: str
     prompt_version: str
     provider: str
+    memories_used: list[str]
 
 
 @router.post("/{creator_id}/generate", response_model=GenerateOut)
@@ -194,7 +196,7 @@ def generate_creator_voice(
             status_code=status.HTTP_400_BAD_REQUEST, detail="user_message is required"
         )
     try:
-        response, version, provider_name = generate_creator_response(
+        response, version, provider_name, memories_used = generate_creator_response(
             db,
             creator,
             message,
@@ -217,9 +219,109 @@ def generate_creator_voice(
         model=response.model,
         prompt_version=version,
         provider=provider_name,
+        memories_used=memories_used,
     )
 
 
 @router.get("/prompts/versions", response_model=list[str])
 def list_prompt_versions() -> list[str]:
     return get_prompt_versions()
+
+
+class MemoryCreate(BaseModel):
+    type: str
+    content: str
+    importance: float = 0.5
+    confidence: float = 1.0
+
+
+class MemoryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    creator_id: int
+    type: str
+    content: str
+    importance: float
+    confidence: float
+    created_at: datetime
+
+
+def _memory_or_404(db: Session, creator_id: int, memory_id: int) -> CreatorMemory:
+    memory = db.get(CreatorMemory, memory_id)
+    if memory is None or memory.creator_id != creator_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="memory not found"
+        )
+    return memory
+
+
+@router.post(
+    "/{creator_id}/memories",
+    status_code=status.HTTP_201_CREATED,
+    response_model=MemoryRead,
+)
+def create_memory(
+    creator_id: int, payload: MemoryCreate, db: Session = Depends(get_db)
+) -> CreatorMemory:
+    _get_or_404(db, creator_id)  # 404 if creator missing
+    content = payload.content.strip()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="content is required"
+        )
+    try:
+        memory_type = MemoryType(payload.type.strip().upper())
+    except ValueError:
+        valid = sorted(t.value for t in MemoryType)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"type must be one of {valid}",
+        )
+    if not 0.0 <= payload.importance <= 1.0 or not 0.0 <= payload.confidence <= 1.0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="importance and confidence must be in [0, 1]",
+        )
+    memory = CreatorMemory(
+        creator_id=creator_id,
+        type=memory_type,
+        content=content,
+        importance=payload.importance,
+        confidence=payload.confidence,
+    )
+    db.add(memory)
+    db.commit()
+    db.refresh(memory)
+    return memory
+
+
+@router.get("/{creator_id}/memories", response_model=list[MemoryRead])
+def list_memories(
+    creator_id: int, type: str | None = None, db: Session = Depends(get_db)
+) -> list[CreatorMemory]:
+    _get_or_404(db, creator_id)
+    q = db.query(CreatorMemory).filter(CreatorMemory.creator_id == creator_id)
+    if type:
+        try:
+            q = q.filter(CreatorMemory.type == MemoryType(type.strip().upper()))
+        except ValueError:
+            valid = sorted(t.value for t in MemoryType)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"type must be one of {valid}",
+            )
+    return q.order_by(
+        CreatorMemory.importance.desc(),
+        CreatorMemory.created_at.desc(),
+        CreatorMemory.id.desc(),
+    ).all()
+
+
+@router.delete("/{creator_id}/memories/{memory_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_memory(
+    creator_id: int, memory_id: int, db: Session = Depends(get_db)
+) -> None:
+    memory = _memory_or_404(db, creator_id, memory_id)
+    db.delete(memory)
+    db.commit()

@@ -1,4 +1,10 @@
-import type { Creator, CreatorCreate, CreatorUpdate } from "../types/creator";
+import type {
+  Creator,
+  CreatorCreate,
+  CreatorMemory,
+  CreatorUpdate,
+  CreatorVoice,
+} from "../types/creator";
 
 const env = import.meta.env as Record<string, string | undefined>;
 const BASE = `${env.VITE_API_URL ?? "http://localhost:8000"}/api/creators`;
@@ -12,7 +18,8 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
     const detail = await res.text();
     throw new Error(`API ${res.status}: ${detail}`);
   }
-  return res.json() as Promise<T>;
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
 }
 
 export const listCreators = (activeOnly = true): Promise<Creator[]> =>
@@ -30,15 +37,6 @@ export const updateCreator = (id: number, patch: CreatorUpdate): Promise<Creator
 export const deactivateCreator = (id: number): Promise<Creator> =>
   req<Creator>(`${BASE}/${id}`, { method: "DELETE" });
 
-export interface CreatorVoice {
-  creator_id: number;
-  creator_name: string;
-  text: string;
-  model: string;
-  prompt_version: string;
-  provider: string;
-}
-
 export const generateCreatorVoice = (
   id: number,
   user_message: string
@@ -50,3 +48,18 @@ export const generateCreatorVoice = (
 
 export const listPromptVersions = (): Promise<string[]> =>
   req<string[]>(`${BASE}/prompts/versions`);
+
+export const listMemories = (creatorId: number): Promise<CreatorMemory[]> =>
+  req<CreatorMemory[]>(`${BASE}/${creatorId}/memories`);
+
+export const createMemory = (
+  creatorId: number,
+  payload: { type: string; content: string; importance?: number; confidence?: number }
+): Promise<CreatorMemory> =>
+  req<CreatorMemory>(`${BASE}/${creatorId}/memories`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const deleteMemory = (creatorId: number, memoryId: number): Promise<void> =>
+  req<void>(`${BASE}/${creatorId}/memories/${memoryId}`, { method: "DELETE" });

@@ -31,4 +31,9 @@ class StubProvider(LLMProvider):
             f"{name} here. {take} Talking {topics}: {request.user_message.strip()} "
             f"— that's my honest read, delivered {voice} with {humor} humor."
         )
+        if request.memories:
+            recall = "; ".join(request.memories)
+            text += (
+                f" And here's what I remember about my own story: {recall}."
+            )
         return GenerateResponse(text=text, model="stub/deterministic-v1")

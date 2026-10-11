@@ -22,6 +22,7 @@ class GenerateRequest:
     system_prompt: str
     user_message: str
     persona: PersonaHint | None = None
+    memories: list[str] = field(default_factory=list)
     temperature: float = 0.7
     max_tokens: int = 300
     seed: int | None = None

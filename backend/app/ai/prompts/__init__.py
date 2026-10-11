@@ -11,6 +11,7 @@ PROMPT_DIR = Path(__file__).parent
 PROMPT_VERSIONS: dict[str, str] = {
     "creator_prompt_v1": "creator_prompt_v1.md",
     "episode_prompt_v1": "episode_prompt_v1.md",
+    "concepts_prompt_v1": "concepts_prompt_v1.md",
 }
 
 
@@ -53,6 +54,36 @@ def render_creator_prompt(creator: Creator, version: str = "creator_prompt_v1") 
         "goals": _join(creator.goals),
         "constraints": creator.constraints
         or "Fictional character only; all publishes require explicit human approval.",
+    }
+    return _render(_load(PROMPT_VERSIONS[version]), values)
+
+
+def render_concepts_prompt(
+    creator: Creator,
+    series_name: str,
+    canon: list[str],
+    memories: list[str],
+    open_threads: list[str],
+    topic: str,
+    count: int,
+    json_schema: str,
+    version: str = "concepts_prompt_v1",
+) -> str:
+    if version not in PROMPT_VERSIONS:
+        raise KeyError(f"unknown prompt version: {version}")
+    values = {
+        "creator_name": creator.name,
+        "personality": creator.personality or "(none)",
+        "interests": _join(creator.interests),
+        "humor_style": creator.humor_style or "(none)",
+        "voice_style": creator.voice_style or "(none)",
+        "series_name": series_name,
+        "canon_facts": _bullets(canon),
+        "memories": _bullets(memories),
+        "open_threads": _bullets(open_threads),
+        "topic": topic,
+        "count": str(count),
+        "json_schema": json_schema,
     }
     return _render(_load(PROMPT_VERSIONS[version]), values)
 

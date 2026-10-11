@@ -144,3 +144,24 @@ resolved_episode_id=4, history 1-4. `npm run build` OK. Dev DB cleaned.
 resolves_thread instruction) BEFORE any experiment record referenced it, so no
 experiment's reproducibility is affected — noted per guide §26.
 **Commit:** Sprint 2.3 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 3.1 — Candidate Generator
+
+**Plan:** Generate 5-10 substantially different episode concepts per request
+(roadmap 3.1, guide §5) as the candidate pool for Phase 4 simulation.
+**Scope:** `models/concept.py` (ConceptSet + Concept), `structured_output.py`
+ConceptItem + `parse_concepts` (3-10 bounds), `ai/evaluation.py::evaluate_concepts`
+(safety BLOCK, duplicate_concepts BLOCK, topic_not_covered REVIEW),
+`concepts_prompt_v1.md` + registry, stub 10 deterministic archetypes with count
+selection, `services/concept_service.py`, `POST /api/series/{id}/generate-concepts`
++ list sets/concepts, frontend concepts panel.
+**Implement:** model/parse/eval/prompt/stub/service/endpoints/UI + 12 tests.
+**Verify:** `pytest` → **82 passed** (12 new: 5 concepts distinct on same topic,
+10 distinct, deterministic same-topic reruns, persisted set+children, duplicate
+BLOCK, banned BLOCK, wrong-count ParseError, topic REVIEW, count bounds 400,
+empty topic 400, unknown series/prompt 404/400). Live: count=5 and count=10 both
+PASS with 5/10 distinct premises, tags/angles varied; sets retrievable.
+`npm run build` OK. Dev DB cleaned.
+**Commit:** Sprint 3.1 commit + push to `main`.

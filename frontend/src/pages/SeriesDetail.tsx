@@ -5,15 +5,23 @@ import {
   createEpisode,
   createThread,
   endSeries,
+  generateConcepts,
   generateEpisode,
   listCanon,
+  listConceptSets,
+  listConcepts,
   listEpisodeHistory,
   listThreads,
   resolveThread,
 } from "../services/story";
 import { CANON_CATEGORIES } from "../types/story";
 import type { CanonEntry, Episode, StoryThread } from "../types/story";
-import type { GeneratedEpisode } from "../services/story";
+import type {
+  Concept,
+  ConceptSetSummary,
+  GeneratedConcepts,
+  GeneratedEpisode,
+} from "../services/story";
 import { getSeries } from "../services/story";
 import type { Series } from "../types/story";
 
@@ -32,6 +40,12 @@ export default function SeriesDetail() {
   const [canonStatement, setCanonStatement] = useState("");
   const [lastGenerated, setLastGenerated] = useState<GeneratedEpisode | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [topic, setTopic] = useState("");
+  const [conceptCount, setConceptCount] = useState("5");
+  const [conceptResult, setConceptResult] = useState<GeneratedConcepts | null>(null);
+  const [conceptSets, setConceptSets] = useState<ConceptSetSummary[]>([]);
+  const [openSetId, setOpenSetId] = useState<number | null>(null);
+  const [openSetConcepts, setOpenSetConcepts] = useState<Concept[]>([]);
 
   const onGenerateEpisode = async () => {
     setGenerating(true);
@@ -51,6 +65,7 @@ export default function SeriesDetail() {
     listEpisodeHistory(seriesId).then(setEpisodes).catch(() => setEpisodes([]));
     listThreads(seriesId).then(setThreads).catch(() => setThreads([]));
     listCanon(seriesId).then(setCanon).catch(() => setCanon([]));
+    listConceptSets(seriesId).then(setConceptSets).catch(() => setConceptSets([]));
   };
 
   useEffect(() => {
@@ -98,6 +113,25 @@ export default function SeriesDetail() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "resolve failed");
     }
+  };
+
+  const onGenerateConcepts = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const result = await generateConcepts(seriesId, topic, Number(conceptCount));
+      setConceptResult(result);
+      refresh();
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "concept generation failed");
+    }
+  };
+
+  const onOpenConceptSet = (setId: number) => {
+    setOpenSetId(setId);
+    listConcepts(setId)
+      .then(setOpenSetConcepts)
+      .catch(() => setOpenSetConcepts([]));
   };
 
   const onCreateCanon = async (e: React.FormEvent) => {
@@ -259,6 +293,75 @@ export default function SeriesDetail() {
         />{" "}
         <button type="submit">add thread</button>
       </form>
+
+      <h2>Candidate concepts (Sprint 3.1)</h2>
+      <form onSubmit={(e) => void onGenerateConcepts(e)}>
+        <input
+          placeholder="topic (e.g. AI tractors)"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          required
+        />{" "}
+        <input
+          type="number"
+          min={3}
+          max={10}
+          value={conceptCount}
+          onChange={(e) => setConceptCount(e.target.value)}
+          style={{ width: 56 }}
+        />{" "}
+        <button type="submit">generate concepts</button>
+      </form>
+      {conceptResult && (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            <strong>{conceptResult.evaluation_status}</strong> — {conceptResult.concepts.length}{" "}
+            concepts · prompt {conceptResult.prompt_version} · model {conceptResult.model}
+          </p>
+          {conceptResult.issues.map((i, idx) => (
+            <p key={idx} style={{ color: "crimson" }}>
+              {i.severity}: {i.code} — {i.detail}
+            </p>
+          ))}
+          <ol>
+            {conceptResult.concepts.map((c) => (
+              <li key={c.id}>
+                <strong>{c.title}</strong>
+                <br />
+                {c.premise}
+                <br />
+                <small>
+                  hook: {c.hook} · angle: {c.angle} · tags: {c.tags}
+                </small>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {conceptSets.length > 0 && (
+        <>
+          <h3>Previous concept sets</h3>
+          <ul>
+            {conceptSets.map((s) => (
+              <li key={s.id}>
+                {s.topic} ({s.created_at}){" "}
+                <button onClick={() => onOpenConceptSet(s.id)}>
+                  {openSetId === s.id ? "shown" : "show"}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {openSetId !== null && (
+            <ol>
+              {openSetConcepts.map((c) => (
+                <li key={c.id}>
+                  <strong>{c.title}</strong> — {c.premise}
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      )}
 
       <h2>Canon</h2>
       {canon.length === 0 ? (

@@ -24,8 +24,10 @@ class GenerateRequest:
     persona: PersonaHint | None = None
     memories: list[str] = field(default_factory=list)
     threads: list[str] = field(default_factory=list)
-    response_format: str = "text"  # "text" | "json"
+    response_format: str = "text"  # "text" | "json" | "concepts"
     variant: int = 0  # deterministic archetype selection
+    count: int = 0  # number of concepts to generate when format is "concepts"
+    topic: str = ""
     temperature: float = 0.7
     max_tokens: int = 300
     seed: int | None = None

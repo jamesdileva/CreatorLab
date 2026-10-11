@@ -2,7 +2,7 @@
 
 Roleplays from the request's PersonaHint (same creator fields the real
 providers read via the system prompt). In "json" mode it emits a valid
-episode draft so the parsing/evaluation pipeline is fully exercised offline.
+episode draft; in "concepts" mode a JSON array of distinct concepts.
 """
 import json
 
@@ -13,6 +13,99 @@ TAKES = [
     "Let me put it this way.",
     "Funny you should ask.",
 ]
+
+
+CONCEPT_ARCHETYPES = [
+    (
+        "the mishap",
+        "{name} tries the new thing once and it goes sideways immediately.",
+        "It broke on the first try.",
+        "slapstick failure",
+        ["comedy", "failure"],
+    ),
+    (
+        "the bargain",
+        "{name} trades something valuable for a shortcut and pays for it later.",
+        "What would you trade for an easy day?",
+        "cost of convenience",
+        ["comedy", "consequence"],
+    ),
+    (
+        "the rival",
+        "A snooty outsider challenges {name} at the county fair.",
+        "Nobody outdoes the old way. Nobody.",
+        "rivalry",
+        ["competition", "pride"],
+    ),
+    (
+        "the lesson",
+        "{name} teaches a visitor why the old way still works.",
+        "Some things cannot be optimized.",
+        "mentorship",
+        ["wholesome", "teaching"],
+    ),
+    (
+        "the suspicion",
+        "{name} is sure something is watching the place. It's the router.",
+        "The blinking light knows too much.",
+        "mild paranoia",
+        ["mystery", "comedy"],
+    ),
+    (
+        "the storm",
+        "Weather hits at the worst possible moment and {name} improvises.",
+        "The forecast said 'fine'. The forecast lied.",
+        "nature vs plan",
+        ["tension", "improvisation"],
+    ),
+    (
+        "the promise",
+        "{name} finally answers a promise made seasons ago.",
+        "The promise comes due.",
+        "callback",
+        ["continuity", "payoff"],
+    ),
+    (
+        "the audit",
+        "A metrics-obsessed visitor tries to rate the unrateable.",
+        "What gets measured, gets gamed.",
+        "satire",
+        ["satire", "work"],
+    ),
+    (
+        "the swap",
+        "{name} swaps places with the visitor for one day and learns both sides.",
+        "A day in the other boots.",
+        "role reversal",
+        ["comedy", "insight"],
+    ),
+    (
+        "the return",
+        "Someone from an early episode comes back changed.",
+        "They said they'd be back.",
+        "reunion",
+        ["continuity", "change"],
+    ),
+]
+
+
+def _concepts_JSON(request: GenerateRequest) -> str:
+    name = request.persona.name if request.persona else "Creator"
+    topic = request.topic or "an ordinary day"
+    count = max(1, min(request.count or 5, len(CONCEPT_ARCHETYPES)))
+    items = []
+    for i in range(count):
+        title, premise, hook, angle, tags = CONCEPT_ARCHETYPES[i]
+        items.append(
+            {
+                "title": f"{topic} — {title}",
+                "premise": premise.format(name=name),
+                "hook": hook.format(name=name),
+                "angle": angle,
+                "tags": tags,
+            }
+        )
+    return "```json\n" + json.dumps(items) + "\n```"
 
 
 def _episode_JSON(request: GenerateRequest) -> str:
@@ -148,6 +241,10 @@ class StubProvider(LLMProvider):
     name = "stub"
 
     def generate(self, request: GenerateRequest) -> GenerateResponse:
+        if request.response_format == "concepts":
+            return GenerateResponse(
+                text=_concepts_JSON(request), model="stub/deterministic-v1"
+            )
         if request.response_format == "json":
             return GenerateResponse(text=_episode_JSON(request), model="stub/deterministic-v1")
         persona = request.persona

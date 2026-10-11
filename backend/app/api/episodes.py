@@ -14,11 +14,13 @@ from sqlalchemy.orm import Session
 from ..ai.structured_output import ParseError
 from ..core.database import get_db
 from ..models.canon import Canon, CanonCategory
+from ..models.concept import Concept, ConceptSet
 from ..models.creator import Creator
 from ..models.episode import Episode, EpisodeStatus
 from ..models.scene import Scene
 from ..models.series import Series, SeriesStatus
 from ..models.story_thread import StoryThread, ThreadStatus
+from ..services.concept_service import ConceptsBlockedError, generate_concepts
 from ..services.episode_service import (
     EpisodeBlockedError,
     GenerationResult,
@@ -527,6 +529,138 @@ def delete_canon(canon_id: int, db: Session = Depends(get_db)) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="canon not found")
     db.delete(canon)
     db.commit()
+
+
+# ---------- Concept generation (Sprint 3.1) ----------
+
+
+class GenerateConceptsIn(BaseModel):
+    topic: str
+    count: int = 5
+    prompt_version: str | None = None
+    provider: str | None = None
+
+
+class ConceptRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    set_id: int
+    index: int
+    title: str
+    premise: str
+    hook: str
+    angle: str
+    tags: str
+    created_at: datetime
+
+
+class ConceptSetRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    creator_id: int
+    series_id: int | None
+    topic: str
+    prompt_version: str
+    provider: str
+    model: str
+    created_at: datetime
+
+
+class GenerateConceptsOut(BaseModel):
+    set: ConceptSetRead
+    concepts: list[ConceptRead]
+    evaluation_status: str
+    issues: list[IssueRead]
+    prompt_version: str
+    provider: str
+    model: str
+
+
+@router.post("/api/series/{series_id}/generate-concepts", response_model=GenerateConceptsOut)
+def generate_concepts_endpoint(
+    series_id: int, payload: GenerateConceptsIn, db: Session = Depends(get_db)
+) -> GenerateConceptsOut:
+    series = _series_or_404(db, series_id)
+    creator = db.get(Creator, series.creator_id)
+    if creator is None or not creator.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="creator is missing or inactive",
+        )
+    topic = payload.topic.strip()
+    if not topic:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="topic is required"
+        )
+    try:
+        result = generate_concepts(
+            db,
+            series,
+            creator,
+            topic,
+            count=payload.count,
+            prompt_version=payload.prompt_version,
+            provider_name=payload.provider,
+        )
+    except ConceptsBlockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": "concept set blocked by evaluation; not persisted",
+                "issues": [
+                    {"code": i.code, "severity": i.severity.value, "detail": i.detail}
+                    for i in exc.evaluation.issues
+                ],
+            },
+        )
+    except ParseError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"unknown prompt version: {exc}",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return GenerateConceptsOut(
+        set=ConceptSetRead.model_validate(result.set),
+        concepts=[ConceptRead.model_validate(c) for c in result.concepts],
+        evaluation_status=result.evaluation.status,
+        issues=[
+            IssueRead(code=i.code, severity=i.severity.value, detail=i.detail)
+            for i in result.evaluation.issues
+        ],
+        prompt_version=result.prompt_version,
+        provider=result.provider,
+        model=result.model,
+    )
+
+
+@router.get("/api/series/{series_id}/concept-sets", response_model=list[ConceptSetRead])
+def list_concept_sets(series_id: int, db: Session = Depends(get_db)) -> list[ConceptSet]:
+    _series_or_404(db, series_id)
+    return (
+        db.query(ConceptSet)
+        .filter(ConceptSet.series_id == series_id)
+        .order_by(ConceptSet.id.desc())
+        .all()
+    )
+
+
+@router.get("/api/concept-sets/{set_id}/concepts", response_model=list[ConceptRead])
+def list_concepts(set_id: int, db: Session = Depends(get_db)) -> list[Concept]:
+    concept_set = db.get(ConceptSet, set_id)
+    if concept_set is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="concept set not found")
+    return (
+        db.query(Concept)
+        .filter(Concept.set_id == set_id)
+        .order_by(Concept.index)
+        .all()
+    )
 
 
 # ---------- Episode generation (Sprint 2.2) ----------

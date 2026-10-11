@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 
-from .structured_output import EpisodeDraft
+from .structured_output import ConceptItem, EpisodeDraft
 
 
 class Severity(str, Enum):
@@ -182,5 +182,62 @@ def evaluate_draft(
                     detail=f"draft claims to resolve unknown thread: {draft.resolves_thread!r}",
                 )
             )
+
+    return Evaluation(issues=issues)
+
+
+def evaluate_concepts(
+    concepts: list[ConceptItem], topic: str = ""
+) -> Evaluation:
+    """Gate a candidate pool: no banned terms, no near-duplicate concepts."""
+    issues: list[Issue] = []
+
+    texts = [
+        " ".join([c.title, c.premise, c.hook, c.angle]).lower() for c in concepts
+    ]
+    for i, text in enumerate(texts):
+        for term in BANNED_TERMS:
+            if term in text:
+                issues.append(
+                    Issue(
+                        code="safety_violation",
+                        severity=Severity.BLOCK,
+                        detail=f"concept {i + 1} contains banned term: {term!r}",
+                    )
+                )
+
+    for i in range(len(concepts)):
+        for j in range(i + 1, len(concepts)):
+            if _overlap(concepts[i].premise, concepts[j].premise) > 0.6:
+                issues.append(
+                    Issue(
+                        code="duplicate_concepts",
+                        severity=Severity.BLOCK,
+                        detail=(
+                            f"concepts {i + 1} and {j + 1} are near-duplicates "
+                            f"({concepts[i].title!r} / {concepts[j].title!r})"
+                        ),
+                    )
+                )
+            if (
+                concepts[i].title.strip().lower()
+                == concepts[j].title.strip().lower()
+            ):
+                issues.append(
+                    Issue(
+                        code="duplicate_concepts",
+                        severity=Severity.BLOCK,
+                        detail=f"concepts {i + 1} and {j + 1} share a title",
+                    )
+                )
+
+    if topic and not any(topic.lower() in t for t in texts):
+        issues.append(
+            Issue(
+                code="topic_not_covered",
+                severity=Severity.REVIEW,
+                detail="no concept references the requested topic",
+            )
+        )
 
     return Evaluation(issues=issues)

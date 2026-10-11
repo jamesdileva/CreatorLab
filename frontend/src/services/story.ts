@@ -141,3 +141,53 @@ export const generateEpisode = (
     method: "POST",
     body: JSON.stringify({ variant }),
   });
+
+// concepts (Sprint 3.1)
+export interface ConceptSetSummary {
+  id: number;
+  creator_id: number;
+  series_id: number | null;
+  topic: string;
+  prompt_version: string;
+  provider: string;
+  model: string;
+  created_at: string;
+}
+
+export interface Concept {
+  id: number;
+  set_id: number;
+  index: number;
+  title: string;
+  premise: string;
+  hook: string;
+  angle: string;
+  tags: string;
+  created_at: string;
+}
+
+export interface GeneratedConcepts {
+  set: ConceptSetSummary;
+  concepts: Concept[];
+  evaluation_status: string;
+  issues: { code: string; severity: string; detail: string }[];
+  prompt_version: string;
+  provider: string;
+  model: string;
+}
+
+export const listConceptSets = (seriesId: number): Promise<ConceptSetSummary[]> =>
+  req<ConceptSetSummary[]>(`${ROOT}/api/series/${seriesId}/concept-sets`);
+
+export const listConcepts = (setId: number): Promise<Concept[]> =>
+  req<Concept[]>(`${ROOT}/api/concept-sets/${setId}/concepts`);
+
+export const generateConcepts = (
+  seriesId: number,
+  topic: string,
+  count: number
+): Promise<GeneratedConcepts> =>
+  req<GeneratedConcepts>(`${ROOT}/api/series/${seriesId}/generate-concepts`, {
+    method: "POST",
+    body: JSON.stringify({ topic, count }),
+  });

@@ -19,8 +19,33 @@ class EpisodeDraft(BaseModel):
     resolves_thread: str | None = None  # exact title of an open thread this episode resolves
 
 
+class ConceptItem(BaseModel):
+    title: str = Field(min_length=1)
+    premise: str = Field(min_length=1)
+    hook: str = ""
+    angle: str = ""
+    tags: list[str] = []
+
+
+def parse_concepts(text: str, minimum: int = 3, maximum: int = 10) -> list[ConceptItem]:
+    """Parse a JSON array of concept items (roadmap Sprint 3.1)."""
+    try:
+        data = _extract_json(text)
+    except (json.JSONDecodeError, AttributeError) as exc:
+        raise ParseError(f"output is not valid JSON: {exc}") from exc
+    try:
+        items = [ConceptItem.model_validate(item) for item in data]
+    except Exception as exc:
+        raise ParseError(f"concepts failed validation: {exc}") from exc
+    if not minimum <= len(items) <= maximum:
+        raise ParseError(
+            f"expected {minimum}-{maximum} concepts, got {len(items)}"
+        )
+    return items
+
+
 class ParseError(ValueError):
-    """Raised when provider output is not a valid EpisodeDraft JSON."""
+    """Raised when provider output is not valid structured output."""
 
 
 _FENCE = re.compile(r"```(?:json)?\s*(.+?)\s*```", re.DOTALL | re.IGNORECASE)

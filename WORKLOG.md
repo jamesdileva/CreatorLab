@@ -205,3 +205,22 @@ topic-match ordering, affinity boost, endpoint validation). Live: 25 seeded
 viewers, 5 personalities, 4 response styles, 6 distinct interest levels
 (0.18–0.30) on identical content. `npm run build` OK. Dev DB cleaned.
 **Commit:** Sprint 4.1 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 4.2 — Audience Reactions
+
+**Plan:** Per-viewer watch/like/comment/share/follow + persisted runs with full
+reproducibility metadata, aggregated into an audience response (roadmap 4.2,
+arch §10).
+**Scope:** `SimulationRun` + `ViewerReaction` models (guide §9 metadata),
+`services/simulation_service.py` (deterministic scroll-stop model + reason codes
++ aggregation), endpoints (run/list/detail/reactions), `SimulationRunner` UI.
+**Implement:** models/engine/endpoints/UI + 10 tests.
+**Verify:** `pytest` → **110 passed** (10 new: bounded probabilities,
+like/comment/share/follow ≤ watch, sharer>lurker, run aggregate ranges,
+episode runs, 25 stored reactions, rerun reproducibility, listing/detail,
+validation/404s, affinity→follow). Live: same episode → watch 0.515/like
+0.273/comment 0.06/share 0.033/follow 0.047, rerun identical, 4 distinct watch
+levels stored. `npm run build` OK. Dev DB cleaned.
+**Commit:** Sprint 4.2 commit + push to `main`.

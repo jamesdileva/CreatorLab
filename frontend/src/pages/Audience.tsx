@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import SimulationRunner from "../components/SimulationRunner";
 
 const env = import.meta.env as Record<string, string | undefined>;
 const ROOT = env.VITE_API_URL ?? "http://localhost:8000";
@@ -138,6 +139,7 @@ export default function Audience() {
               ))}
             </tbody>
           </table>
+          <SimulationRunner />
         </>
       )}
     </main>

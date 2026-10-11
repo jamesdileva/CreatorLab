@@ -6,11 +6,13 @@ from .creator_memory import CreatorMemory, MemoryType
 from .episode import Episode, EpisodeStatus
 from .scene import Scene
 from .series import Series, SeriesStatus
+from .simulation import REACTION_VERSION, SimulationRun, TargetType, ViewerReaction
 from .story_thread import StoryThread, ThreadStatus
 from .viewer import AUDIENCE_VERSION, SyntheticViewer
 
 __all__ = [
     "AUDIENCE_VERSION",
+    "REACTION_VERSION",
     "Canon",
     "CanonCategory",
     "Concept",
@@ -25,7 +27,10 @@ __all__ = [
     "Scene",
     "Series",
     "SeriesStatus",
+    "SimulationRun",
     "StoryThread",
     "SyntheticViewer",
+    "TargetType",
     "ThreadStatus",
+    "ViewerReaction",
 ]

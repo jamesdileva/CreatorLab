@@ -17,7 +17,8 @@ export default function Dashboard() {
       <p>Backend health: {health}</p>
       <nav>
         <Link to="/creators">Creators</Link>{" · "}
-        <Link to="/series">Series</Link>
+        <Link to="/series">Series</Link>{" · "}
+        <Link to="/simulation">Simulation</Link>
       </nav>
       <p>Episodes, simulation, and reality-gap land in later sprints.</p>
     </main>

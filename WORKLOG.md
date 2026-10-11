@@ -186,3 +186,22 @@ comparison values; pre-data 409; 404s). Live: 5 concepts scored+ranks,
 identical comparison (1.0/1.0) then reversed (-1.0/-1.0, directional 0.0).
 `npm run build` OK. Dev DB cleaned.
 **Commit:** Sprint 3.2 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 4.1 — Synthetic Viewer
+
+**Plan:** Heterogeneous 25-viewer audience, deterministically seeded (roadmap 4.1,
+arch §10, guide §9 reproducibility).
+**Scope:** `SyntheticViewer` model (interests/personality/humor/attention/
+affinities/response_style + `audience_version`), `services/audience_service.py`
+(deterministic `seed_audience` + `baseline_interest` heuristic precursor to the
+Sprint 4.2 reaction model), `api/simulation.py` (seed/list/detail/affinity/
+preview), `/simulation` population page with identical-content check.
+**Implement:** model/service/API/UI + 9 tests.
+**Verify:** `pytest` → **100 passed** (9 new: seed 25 + version, idempotent
+re-seed, heterogeneity thresholds, differing reactions on identical content,
+topic-match ordering, affinity boost, endpoint validation). Live: 25 seeded
+viewers, 5 personalities, 4 response styles, 6 distinct interest levels
+(0.18–0.30) on identical content. `npm run build` OK. Dev DB cleaned.
+**Commit:** Sprint 4.1 commit + push to `main`.

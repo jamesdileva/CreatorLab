@@ -7,8 +7,10 @@ from .episode import Episode, EpisodeStatus
 from .scene import Scene
 from .series import Series, SeriesStatus
 from .story_thread import StoryThread, ThreadStatus
+from .viewer import AUDIENCE_VERSION, SyntheticViewer
 
 __all__ = [
+    "AUDIENCE_VERSION",
     "Canon",
     "CanonCategory",
     "Concept",
@@ -24,5 +26,6 @@ __all__ = [
     "Series",
     "SeriesStatus",
     "StoryThread",
+    "SyntheticViewer",
     "ThreadStatus",
 ]

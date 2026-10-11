@@ -2,6 +2,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Creators from "./pages/Creators";
 import CreatorDetail from "./pages/CreatorDetail";
+import SeriesList from "./pages/SeriesList";
+import SeriesDetail from "./pages/SeriesDetail";
+import EpisodeDetail from "./pages/EpisodeDetail";
 
 export default function App() {
   return (
@@ -9,6 +12,9 @@ export default function App() {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/creators" element={<Creators />} />
       <Route path="/creators/:id" element={<CreatorDetail />} />
+      <Route path="/series" element={<SeriesList />} />
+      <Route path="/series/:id" element={<SeriesDetail />} />
+      <Route path="/episodes/:id" element={<EpisodeDetail />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

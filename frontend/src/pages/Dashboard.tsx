@@ -16,7 +16,8 @@ export default function Dashboard() {
       <h1>CreatorLab — Dashboard (Sprint 1.1)</h1>
       <p>Backend health: {health}</p>
       <nav>
-        <Link to="/creators">Creators</Link>
+        <Link to="/creators">Creators</Link>{" · "}
+        <Link to="/series">Series</Link>
       </nav>
       <p>Episodes, simulation, and reality-gap land in later sprints.</p>
     </main>

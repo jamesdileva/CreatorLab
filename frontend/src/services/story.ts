@@ -1,0 +1,120 @@
+import type { CanonEntry, Episode, Scene, Series, StoryThread } from "../types/story";
+
+const env = import.meta.env as Record<string, string | undefined>;
+const ROOT = env.VITE_API_URL ?? "http://localhost:8000";
+
+async function req<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`API ${res.status}: ${detail}`);
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+// series
+export const listSeries = (creatorId?: number): Promise<Series[]> =>
+  req<Series[]>(
+    `${ROOT}/api/series${creatorId != null ? `?creator_id=${creatorId}` : ""}`
+  );
+
+export const getSeries = (id: number): Promise<Series> =>
+  req<Series>(`${ROOT}/api/series/${id}`);
+
+export const createSeries = (name: string, creatorId: number): Promise<Series> =>
+  req<Series>(`${ROOT}/api/series`, {
+    method: "POST",
+    body: JSON.stringify({ name, creator_id: creatorId, description: "" }),
+  });
+
+export const endSeries = (id: number): Promise<Series> =>
+  req<Series>(`${ROOT}/api/series/${id}`, { method: "DELETE" });
+
+// episodes
+export const listEpisodeHistory = (seriesId: number): Promise<Episode[]> =>
+  req<Episode[]>(`${ROOT}/api/series/${seriesId}/episodes`);
+
+export const createEpisode = (
+  seriesId: number,
+  payload: { title: string; premise?: string; synopsis?: string }
+): Promise<Episode> =>
+  req<Episode>(`${ROOT}/api/series/${seriesId}/episodes`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const getEpisode = (id: number): Promise<Episode> =>
+  req<Episode>(`${ROOT}/api/episodes/${id}`);
+
+export const updateEpisode = (
+  id: number,
+  patch: { title?: string; premise?: string; synopsis?: string; script?: string; status?: string }
+): Promise<Episode> =>
+  req<Episode>(`${ROOT}/api/episodes/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+
+export const archiveEpisode = (id: number): Promise<Episode> =>
+  req<Episode>(`${ROOT}/api/episodes/${id}`, { method: "DELETE" });
+
+// scenes
+export const listScenes = (episodeId: number): Promise<Scene[]> =>
+  req<Scene[]>(`${ROOT}/api/episodes/${episodeId}/scenes`);
+
+export const createScene = (
+  episodeId: number,
+  payload: { title?: string; direction?: string }
+): Promise<Scene> =>
+  req<Scene>(`${ROOT}/api/episodes/${episodeId}/scenes`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const deleteScene = (sceneId: number): Promise<void> =>
+  req<void>(`${ROOT}/api/scenes/${sceneId}`, { method: "DELETE" });
+
+// threads
+export const listThreads = (seriesId: number): Promise<StoryThread[]> =>
+  req<StoryThread[]>(`${ROOT}/api/series/${seriesId}/threads`);
+
+export const createThread = (
+  seriesId: number,
+  payload: { title: string; description?: string; introduced_episode_id?: number }
+): Promise<StoryThread> =>
+  req<StoryThread>(`${ROOT}/api/series/${seriesId}/threads`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const resolveThread = (
+  threadId: number,
+  resolvedEpisodeId: number
+): Promise<StoryThread> =>
+  req<StoryThread>(`${ROOT}/api/threads/${threadId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "RESOLVED", resolved_episode_id: resolvedEpisodeId }),
+  });
+
+export const deleteThread = (threadId: number): Promise<void> =>
+  req<void>(`${ROOT}/api/threads/${threadId}`, { method: "DELETE" });
+
+// canon
+export const listCanon = (seriesId: number): Promise<CanonEntry[]> =>
+  req<CanonEntry[]>(`${ROOT}/api/series/${seriesId}/canon`);
+
+export const createCanon = (
+  seriesId: number,
+  payload: { category: string; statement: string }
+): Promise<CanonEntry> =>
+  req<CanonEntry>(`${ROOT}/api/series/${seriesId}/canon`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const deleteCanon = (canonId: number): Promise<void> =>
+  req<void>(`${ROOT}/api/canon/${canonId}`, { method: "DELETE" });

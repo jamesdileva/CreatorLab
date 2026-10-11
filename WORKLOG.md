@@ -81,3 +81,25 @@ in text + `memories_used`); seed idempotent (8 memories created → updated); li
 generation used all 4 Hank memories sorted by importance; `npm run build` OK.
 Dev DB cleaned after check.
 **Commit:** Sprint 1.3 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 2.1 — Series Model
+
+**Plan:** Give creators an actual fictional universe (roadmap 2.1, guide Phase 4).
+**Scope:** Models `Series`, `Episode` (auto numbering, unique per series, 8 statuses),
+`Scene`, `StoryThread` (OPEN/RESOLVED/ABANDONED + introduced/resolved episode),
+`Canon` (universe facts, 7 categories); full CRUD in `api/episodes.py` (arch §8
+file list respected); delete-episode → ARCHIVED, delete-series → ENDED (history
+preserved); frontend `/series`, `/series/:id` (episodes/threads/canon),
+`/episodes/:id` (scenes + status).
+Out of scope: episode generator (2.2).
+**Implement:** 5 model files + `api/episodes.py` (~600 lines) + `tests/test_story_universe.py`
+(11 tests) + 3 pages + `services/story.ts` + `types/story.ts` + routes/nav.
+**Verify:** `pytest` → **52 passed** (11 new: three-episode history retrieval
+returns ordered [1,2,3] with premises; auto-numbering; duplicate 409; status
+lifecycle + invalid 400; archive keeps record viewable; scenes unique+ordered;
+thread open→resolve linking episode; cross-series link 400; canon CRUD + 400s;
+404s). Live check: created series + 3 episodes + scenes + resolved thread + canon
+via REST. `npm run build` OK (43 modules). Dev DB cleaned.
+**Commit:** Sprint 2.1 commit + push to `main`.

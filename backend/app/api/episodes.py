@@ -4,6 +4,9 @@ Delete semantics follow the experiment-first design: deleting a series marks it
 ENDED and deleting an episode ARCHIVES it, so history stays viewable.
 """
 from datetime import datetime
+from pathlib import Path
+
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
@@ -33,6 +36,7 @@ from ..services.scoring_service import (
     record_human_ranking,
     score_concept_set,
 )
+from ..services.video_service import VideoError, render_episode_video
 
 router = APIRouter(tags=["story-universe"])
 
@@ -291,6 +295,55 @@ def archive_episode(episode_id: int, db: Session = Depends(get_db)) -> Episode:
     db.commit()
     db.refresh(episode)
     return episode
+
+
+# ---------- Video rendering (Sprint 5.1) ----------
+
+
+class RenderIn(BaseModel):
+    voice_id: str | None = None
+    rate: int = 175
+
+
+class RenderOut(BaseModel):
+    episode_id: int
+    status: str
+    video_url: str
+    captions_url: str
+    manifest_url: str
+    total_duration: float
+    scene_count: int
+
+
+@router.post("/api/episodes/{episode_id}/render", response_model=RenderOut)
+def render_episode(
+    episode_id: int, payload: RenderIn, db: Session = Depends(get_db)
+) -> RenderOut:
+    _episode_or_404(db, episode_id)
+    try:
+        manifest = render_episode_video(
+            db, episode_id, voice_id=payload.voice_id, rate=payload.rate
+        )
+    except VideoError as exc:
+        message = str(exc)
+        code = (
+            status.HTTP_422_UNPROCESSABLE_ENTITY
+            if "exceeds" in message or "no scenes" in message or "no narration" in message
+            else status.HTTP_502_BAD_GATEWAY
+        )
+        raise HTTPException(status_code=code, detail=message)
+    run_dir = f"media/generated/episode_{episode_id}"
+    latest = sorted(Path(run_dir).iterdir(), key=lambda p: p.name)[-1].name
+    base = f"/media/generated/episode_{episode_id}/{latest}"
+    return RenderOut(
+        episode_id=episode_id,
+        status="READY",
+        video_url=f"{base}/final.mp4",
+        captions_url=f"{base}/captions.srt",
+        manifest_url=f"{base}/manifest.json",
+        total_duration=manifest["total_duration"],
+        scene_count=len(manifest["scenes"]),
+    )
 
 
 # ---------- Scenes ----------

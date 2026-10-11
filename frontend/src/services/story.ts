@@ -62,6 +62,23 @@ export const updateEpisode = (
 export const archiveEpisode = (id: number): Promise<Episode> =>
   req<Episode>(`${ROOT}/api/episodes/${id}`, { method: "DELETE" });
 
+// video rendering (Sprint 5.1)
+export interface RenderResult {
+  episode_id: number;
+  status: string;
+  video_url: string;
+  captions_url: string;
+  manifest_url: string;
+  total_duration: number;
+  scene_count: number;
+}
+
+export const renderEpisode = (id: number): Promise<RenderResult> =>
+  req<RenderResult>(`${ROOT}/api/episodes/${id}/render`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
 // scenes
 export const listScenes = (episodeId: number): Promise<Scene[]> =>
   req<Scene[]>(`${ROOT}/api/episodes/${episodeId}/scenes`);

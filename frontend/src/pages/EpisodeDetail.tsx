@@ -6,10 +6,16 @@ import {
   deleteScene,
   getEpisode,
   listScenes,
+  renderEpisode,
   updateEpisode,
 } from "../services/story";
+import type { RenderResult } from "../services/story";
 import { EPISODE_STATUSES } from "../types/story";
 import type { Episode, Scene } from "../types/story";
+
+const API_ROOT =
+  (import.meta.env as Record<string, string | undefined>).VITE_API_URL ??
+  "http://localhost:8000";
 
 export default function EpisodeDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +25,8 @@ export default function EpisodeDetail() {
   const [error, setError] = useState("");
   const [sceneTitle, setSceneTitle] = useState("");
   const [sceneDirection, setSceneDirection] = useState("");
+  const [render, setRender] = useState<RenderResult | null>(null);
+  const [rendering, setRendering] = useState(false);
 
   const refresh = () => {
     getEpisode(episodeId).then(setEpisode).catch((e) =>
@@ -60,6 +68,21 @@ export default function EpisodeDetail() {
     }
   };
 
+  const onRender = async () => {
+    setRendering(true);
+    try {
+      const result = await renderEpisode(episodeId);
+      setRender(result);
+      const refreshed = await getEpisode(episodeId);
+      setEpisode(refreshed);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "render failed");
+    } finally {
+      setRendering(false);
+    }
+  };
+
   if (error && !episode) return <main style={{ padding: 24 }}>{error}</main>;
   if (!episode) return <main style={{ padding: 24 }}>loading…</main>;
 
@@ -98,6 +121,27 @@ export default function EpisodeDetail() {
       </label>{" "}
       {episode.status !== "ARCHIVED" && (
         <button onClick={() => void onArchive()}>archive</button>
+      )}{" "}
+      <button disabled={rendering} onClick={() => void onRender()}>
+        {rendering ? "rendering…" : "render short"}
+      </button>
+
+      {render && (
+        <div style={{ marginTop: 12 }}>
+          <h2>
+            Rendered Short — {render.total_duration.toFixed(1)}s,{" "}
+            {render.scene_count} scenes
+          </h2>
+          <video
+            controls
+            src={`${API_ROOT}${render.video_url}`}
+            style={{ width: 270, height: 480, background: "#000" }}
+          />
+          <p style={{ fontSize: 12 }}>
+            <a href={`${API_ROOT}${render.captions_url}`}>captions.srt</a> ·{" "}
+            <a href={`${API_ROOT}${render.manifest_url}`}>manifest.json</a>
+          </p>
+        </div>
       )}
 
       <h2>Scenes ({scenes.length})</h2>

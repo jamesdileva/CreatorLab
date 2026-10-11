@@ -243,3 +243,23 @@ detail, alternate metric, episode ranking, validation/404s). Live:
 `#2 (0.652) > #4 (0.593) > #1 (0.584) > #3 (0.583)` — roadmap's A>C>B>D shape,
 rerun identical. `npm run build` OK. Dev DB cleaned.
 **Commit:** Sprint 4.3 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 5.1 — Simple Video Renderer
+
+**Plan:** Produce an actual 15-45s video artifact (roadmap 5.1, guide §10-11):
+scene cards + offline TTS + SRT captions + FFmpeg assembly, every intermediate
+artifact kept.
+**Scope:** `services/video_service.py` (Pillow 1080x1920 cards with Ken Burns
+zoompan, pyttsx3/SAPI speech, SRT + label burn-in, concat, manifest.json),
+`POST /api/episodes/{id}/render` (RENDERING→READY, REVERT on failure), `/media`
+static mount, episode-detail render button + `<video>` preview. Offline-first;
+character visuals deferred to 5.2.
+**Implement:** video_service/render endpoint/media mount/frontend render UI + 9 tests.
+**Verify:** `pytest` → **126 passed** (9 new: card dimensions, SRT format,
+ffprobe duration, end-to-end render inside the 15-45s window, too-long rejection,
+empty-scene rejection, episode render → status READY + manifest episode_id, 404,
+real-TTS smoke). Live: 3-scene episode rendered to a 15.0s 1080x1920 h264 MP4
+(697KB), episode status READY. `npm run build` OK. Artifacts gitignored.
+**Commit:** Sprint 5.1 commit + push to `main`.

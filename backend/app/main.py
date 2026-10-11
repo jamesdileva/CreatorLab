@@ -1,7 +1,9 @@
 """CreatorLab backend — Sprint 1.1: health + creator CRUD."""
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from .api.creators import router as creators_router
 from .api.episodes import router as episodes_router
@@ -20,6 +22,10 @@ app = FastAPI(title="CreatorLab", version="0.1.1", lifespan=lifespan)
 app.include_router(creators_router)
 app.include_router(episodes_router)
 app.include_router(simulation_router)
+
+# Dev-only media serving so rendered artifacts are previewable in the UI.
+Path("media/generated").mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory="media"), name="media")
 
 
 @app.get("/health")

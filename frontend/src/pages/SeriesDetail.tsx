@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import ConceptRanking from "../components/ConceptRanking";
 import {
   createCanon,
   createEpisode,
@@ -336,6 +337,7 @@ export default function SeriesDetail() {
               </li>
             ))}
           </ol>
+          <ConceptRanking key={conceptResult.set.id} concepts={conceptResult.concepts} />
         </div>
       )}
       {conceptSets.length > 0 && (

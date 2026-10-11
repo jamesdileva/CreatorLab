@@ -15,6 +15,7 @@ from ..ai.structured_output import ParseError
 from ..core.database import get_db
 from ..models.canon import Canon, CanonCategory
 from ..models.concept import Concept, ConceptSet
+from ..models.concept_score import ConceptScore, HumanRanking
 from ..models.creator import Creator
 from ..models.episode import Episode, EpisodeStatus
 from ..models.scene import Scene
@@ -25,6 +26,12 @@ from ..services.episode_service import (
     EpisodeBlockedError,
     GenerationResult,
     generate_episode,
+)
+from ..services.scoring_service import (
+    SCORER_VERSION,
+    compare_with_human,
+    record_human_ranking,
+    score_concept_set,
 )
 
 router = APIRouter(tags=["story-universe"])
@@ -661,6 +668,140 @@ def list_concepts(set_id: int, db: Session = Depends(get_db)) -> list[Concept]:
         .order_by(Concept.index)
         .all()
     )
+
+
+# ---------- Concept scoring + human comparison (Sprint 3.2) ----------
+
+
+class ConceptScoreRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    concept_id: int
+    set_id: int
+    rank: int
+    hook_score: float
+    character_fit_score: float
+    novelty_score: float
+    story_potential_score: float
+    audience_relevance_score: float
+    episode_continuity_score: float
+    composite: float
+    scorer_version: str
+    created_at: datetime
+
+
+class ScoredConceptRead(BaseModel):
+    concept: ConceptRead
+    rank: int
+    scores: dict[str, float]
+    composite: float
+
+
+class ScoreSetOut(BaseModel):
+    set: ConceptSetRead
+    scorer_version: str
+    ranked: list[ScoredConceptRead]
+
+
+class HumanRankingIn(BaseModel):
+    order: list[int]
+    note: str = ""
+
+
+class HumanRankingRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    set_id: int
+    order: str
+    note: str
+    created_at: datetime
+
+
+class ComparisonOut(BaseModel):
+    system_order: list[int]
+    human_order: list[int]
+    agreement: dict
+    correlation: dict
+    system_top: int
+    human_top: int
+    sample_size: int
+
+
+def _set_or_404(db: Session, set_id: int) -> ConceptSet:
+    concept_set = db.get(ConceptSet, set_id)
+    if concept_set is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="concept set not found"
+        )
+    return concept_set
+
+
+@router.post("/api/concept-sets/{set_id}/score", response_model=ScoreSetOut)
+def score_set(set_id: int, db: Session = Depends(get_db)) -> ScoreSetOut:
+    concept_set = _set_or_404(db, set_id)
+    creator = db.get(Creator, concept_set.creator_id)
+    if creator is None or not creator.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="creator is missing or inactive",
+        )
+    try:
+        results = score_concept_set(db, concept_set, creator)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return ScoreSetOut(
+        set=ConceptSetRead.model_validate(concept_set),
+        scorer_version=SCORER_VERSION,
+        ranked=[
+            ScoredConceptRead(
+                concept=ConceptRead.model_validate(r.concept),
+                rank=r.rank,
+                scores=r.scores,
+                composite=r.composite,
+            )
+            for r in results
+        ],
+    )
+
+
+@router.get("/api/concept-sets/{set_id}/scores", response_model=list[ConceptScoreRead])
+def list_scores(set_id: int, db: Session = Depends(get_db)) -> list[ConceptScore]:
+    _set_or_404(db, set_id)
+    return (
+        db.query(ConceptScore)
+        .filter(ConceptScore.set_id == set_id)
+        .order_by(ConceptScore.rank)
+        .all()
+    )
+
+
+@router.post(
+    "/api/concept-sets/{set_id}/human-ranking",
+    status_code=status.HTTP_201_CREATED,
+    response_model=HumanRankingRead,
+)
+def record_human_ranking_endpoint(
+    set_id: int, payload: HumanRankingIn, db: Session = Depends(get_db)
+) -> HumanRanking:
+    concept_set = _set_or_404(db, set_id)
+    try:
+        return record_human_ranking(db, concept_set, payload.order, payload.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.get("/api/concept-sets/{set_id}/comparison", response_model=ComparisonOut | None)
+def get_comparison(set_id: int, db: Session = Depends(get_db)) -> ComparisonOut | None:
+    concept_set = _set_or_404(db, set_id)
+    result = compare_with_human(db, concept_set)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="score the set and record a human ranking first",
+        )
+    return ComparisonOut(**result)
 
 
 # ---------- Episode generation (Sprint 2.2) ----------

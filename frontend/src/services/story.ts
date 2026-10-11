@@ -191,3 +191,52 @@ export const generateConcepts = (
     method: "POST",
     body: JSON.stringify({ topic, count }),
   });
+
+// scoring + human comparison (Sprint 3.2)
+export interface ScoredConcept {
+  concept: Concept;
+  rank: number;
+  scores: Record<string, number>;
+  composite: number;
+}
+
+export interface ScoreSetResult {
+  set: ConceptSetSummary;
+  scorer_version: string;
+  ranked: ScoredConcept[];
+}
+
+export interface ConceptComparison {
+  system_order: number[];
+  human_order: number[];
+  agreement: {
+    top_1_match: boolean;
+    top_3_overlap: number;
+    directional_accuracy: number;
+  };
+  correlation: { spearman: number; kendall_tau: number };
+  system_top: number;
+  human_top: number;
+  sample_size: number;
+}
+
+export const scoreConceptSet = (setId: number): Promise<ScoreSetResult> =>
+  req<ScoreSetResult>(`${ROOT}/api/concept-sets/${setId}/score`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
+export const recordHumanRanking = (
+  setId: number,
+  order: number[],
+  note = ""
+): Promise<unknown> =>
+  req<unknown>(`${ROOT}/api/concept-sets/${setId}/human-ranking`, {
+    method: "POST",
+    body: JSON.stringify({ order, note }),
+  });
+
+export const getConceptComparison = (
+  setId: number
+): Promise<ConceptComparison | null> =>
+  req<ConceptComparison | null>(`${ROOT}/api/concept-sets/${setId}/comparison`);

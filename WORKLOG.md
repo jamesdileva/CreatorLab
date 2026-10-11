@@ -165,3 +165,24 @@ empty topic 400, unknown series/prompt 404/400). Live: count=5 and count=10 both
 PASS with 5/10 distinct premises, tags/angles varied; sets retrievable.
 `npm run build` OK. Dev DB cleaned.
 **Commit:** Sprint 3.1 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 3.2 — Concept Evaluation
+
+**Plan:** Score candidate concepts on the six roadmap dimensions and compare
+rankings against human judgment (roadmap 3.2, arch §12).
+**Scope:** `core/metrics.py` (Spearman, Kendall-τ, top-k, directional accuracy —
+shared with Phase 9 later), `models/concept_score.py` (ConceptScore + HumanRanking),
+`services/scoring_service.py` (deterministic heuristic-v1 baseline: hook, character
+fit, novelty, story potential, audience relevance, episode continuity → weighted
+composite + rank; idempotent upserts; human ranking validation; comparison report),
+4 endpoints (score/lists/human-ranking/comparison), `ConceptRanking.tsx` UI.
+**Implement:** metrics/models/service/endpoints/UI + 9 tests.
+**Verify:** `pytest` → **91 passed** (9 new: known-vector metric correctness incl.
+reversed/inverted rankings; six-dimension output + rank ordering + composite
+weights; persistence idempotence; human-ranking validation; reversed vs identical
+comparison values; pre-data 409; 404s). Live: 5 concepts scored+ranks,
+identical comparison (1.0/1.0) then reversed (-1.0/-1.0, directional 0.0).
+`npm run build` OK. Dev DB cleaned.
+**Commit:** Sprint 3.2 commit + push to `main`.

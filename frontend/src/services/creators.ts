@@ -63,3 +63,27 @@ export const createMemory = (
 
 export const deleteMemory = (creatorId: number, memoryId: number): Promise<void> =>
   req<void>(`${BASE}/${creatorId}/memories/${memoryId}`, { method: "DELETE" });
+
+// character visual identity (Sprint 5.2)
+export interface CharacterIdentity {
+  id: number;
+  creator_id: number;
+  display_name: string;
+  palette: Record<string, string>;
+  accessories: string[];
+  props: string[];
+  style: string;
+  version: string;
+}
+
+export const getIdentity = (creatorId: string): Promise<CharacterIdentity> =>
+  req<CharacterIdentity>(`${BASE}/${creatorId}/identity`);
+
+export const updateIdentity = (
+  creatorId: string,
+  patch: { palette?: Record<string, string>; accessories?: string[]; display_name?: string }
+): Promise<CharacterIdentity> =>
+  req<CharacterIdentity>(`${BASE}/${creatorId}/identity`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });

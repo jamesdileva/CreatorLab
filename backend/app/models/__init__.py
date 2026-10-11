@@ -1,3 +1,4 @@
+from ..services.character_service import CharacterIdentity
 from .canon import Canon, CanonCategory
 from .concept import Concept, ConceptSet
 from .concept_score import ConceptScore, HumanRanking
@@ -18,6 +19,7 @@ from .story_thread import StoryThread, ThreadStatus
 from .viewer import AUDIENCE_VERSION, SyntheticViewer
 
 __all__ = [
+    "CharacterIdentity",
     "AUDIENCE_VERSION",
     "RANKING_VERSION",
     "REACTION_VERSION",

@@ -263,3 +263,23 @@ empty-scene rejection, episode render → status READY + manifest episode_id, 40
 real-TTS smoke). Live: 3-scene episode rendered to a 15.0s 1080x1920 h264 MP4
 (697KB), episode status READY. `npm run build` OK. Artifacts gitignored.
 **Commit:** Sprint 5.1 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 5.2 — Character Visual Identity
+
+**Plan:** Consistent, distinct per-creator visuals for the short renderer
+(roadmap 5.2), offline-only (no external image services).
+**Scope:** `services/character_service.py` — `CharacterIdentity` model
+(palette/accessories/props/style + `identity-v1`), default identities for
+Hank (cap/beard/gear, olive) and Alex.exe (visor/headset/terminal, cyan),
+deterministic flat-design portrait renderer, `render_identity_card` wired into
+the Sprint 5.1 pipeline (manifest `card_version`), identity endpoints
+(GET/PATCH + portrait preview), creator-detail identity panel.
+**Implement:** character_service/identity API/renderer wiring/UI + 9 tests.
+**Verify:** `pytest` → **135 passed** (9 new: default identity, one-per-creator,
+palette validation, accessory/display-name updates, 404, deterministic +
+distinct portraits, five-scene consistency (character region pixel-identical),
+identity snapshot, episode render through identity). Live: 5 Hank cards →
+scene-vs-scene diff 0.0, Hank-vs-Alex diff 0.157. `npm run build` OK.
+**Commit:** Sprint 5.2 commit + push to `main`.

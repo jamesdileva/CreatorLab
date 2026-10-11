@@ -16,6 +16,13 @@ from ..ai.providers import ProviderError
 from ..core.database import get_db
 from ..models.creator import Creator
 from ..models.creator_memory import CreatorMemory, MemoryType
+from ..services.character_service import (
+    IDENTITY_VERSION,
+    CharacterIdentity,
+    identity_for_creator,
+    identity_snapshot,
+    validate_palette,
+)
 from ..services.creator_service import generate_creator_response
 
 router = APIRouter(prefix="/api/creators", tags=["creators"])
@@ -226,6 +233,80 @@ def generate_creator_voice(
 @router.get("/prompts/versions", response_model=list[str])
 def list_prompt_versions() -> list[str]:
     return get_prompt_versions()
+
+
+# ---------- Character visual identity (Sprint 5.2) ----------
+
+
+class PaletteUpdateIn(BaseModel):
+    palette: dict | None = None
+    accessories: list[str] | None = None
+    display_name: str | None = None
+
+
+class IdentityRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    creator_id: int
+    display_name: str
+    palette: dict
+    accessories: list[str]
+    props: list[str]
+    style: str
+    version: str
+    created_at: datetime
+
+
+@router.get("/{creator_id}/identity", response_model=IdentityRead)
+def get_identity(creator_id: int, db: Session = Depends(get_db)) -> CharacterIdentity:
+    creator = _get_or_404(db, creator_id)
+    try:
+        return identity_for_creator(db, creator)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.patch("/{creator_id}/identity", response_model=IdentityRead)
+def update_identity(
+    creator_id: int, payload: PaletteUpdateIn, db: Session = Depends(get_db)
+) -> CharacterIdentity:
+    creator = _get_or_404(db, creator_id)
+    try:
+        identity = identity_for_creator(db, creator)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    try:
+        if payload.palette is not None:
+            identity.palette_json = validate_palette(payload.palette)
+        if payload.accessories is not None:
+            identity.accessories = [str(a).strip().lower() for a in payload.accessories]
+        if payload.display_name is not None:
+            name = payload.display_name.strip()
+            if not name:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="display_name is required"
+                )
+            identity.display_name = name
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    db.commit()
+    db.refresh(identity)
+    return identity
+
+
+@router.post("/{creator_id}/identity/portrait", response_model=IdentityRead)
+def render_identity_portrait(creator_id: int, db: Session = Depends(get_db)) -> IdentityRead:
+    """Render a preview portrait; returns the identity (assets served under /media)."""
+    creator = _get_or_404(db, creator_id)
+    try:
+        identity = identity_for_creator(db, creator)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    from ..services.video_service import render_episode_identity_preview
+
+    render_episode_identity_preview(identity)
+    return identity
 
 
 class MemoryCreate(BaseModel):

@@ -5,11 +5,17 @@ import {
   deleteMemory,
   generateCreatorVoice,
   getCreator,
+  getIdentity,
   listMemories,
   updateCreator,
+  updateIdentity,
 } from "../services/creators";
 import { MEMORY_TYPES } from "../types/creator";
+import type { CharacterIdentity } from "../services/creators";
 import type { Creator, CreatorMemory, CreatorVoice } from "../types/creator";
+
+const env = import.meta.env as Record<string, string | undefined>;
+const API_ROOT = env.VITE_API_URL ?? "http://localhost:8000";
 
 const csv = (xs: string[]) => xs.join(", ");
 const uncsv = (s: string) =>
@@ -35,6 +41,7 @@ export default function CreatorDetail() {
   const [memType, setMemType] = useState<string>("CANON");
   const [memContent, setMemContent] = useState("");
   const [memImportance, setMemImportance] = useState("0.5");
+  const [identity, setIdentity] = useState<CharacterIdentity | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -54,6 +61,9 @@ export default function CreatorDetail() {
     listMemories(creatorId)
       .then(setMemories)
       .catch(() => setMemories([]));
+    getIdentity(String(creatorId))
+      .then(setIdentity)
+      .catch(() => setIdentity(null));
   };
 
   useEffect(() => {
@@ -299,6 +309,47 @@ export default function CreatorDetail() {
         Stored facts are injected into generation (most important first, up to 10)
         so the creator remembers its fictional history.
       </p>
+
+      <h2>Visual identity (Sprint 5.2)</h2>
+      {identity === null ? (
+        <p>no identity yet (renders use plain cards)</p>
+      ) : (
+        <div>
+          <p>
+            <strong>{identity.display_name}</strong> · version {identity.version}
+          </p>
+          <p>
+            accessories: {identity.accessories.join(", ") || "—"} · props:{" "}
+            {identity.props.join(", ") || "—"}
+          </p>
+          <p style={{ fontSize: 12, color: "#555" }}>{identity.style}</p>
+          <p>
+            {Object.entries(identity.palette).map(([k, v]) => (
+              <span key={k} style={{ marginRight: 12, fontSize: 12 }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 12,
+                    height: 12,
+                    background: v,
+                    border: "1px solid #999",
+                    marginRight: 4,
+                  }}
+                />
+                {k}
+              </span>
+            ))}
+          </p>
+          <img
+            src={`${API_ROOT}/media/portraits/creator_${identity.creator_id}_${identity.version}/portrait.png`}
+            alt={`${identity.display_name} portrait`}
+            style={{ width: 135, height: 240, objectFit: "cover", background: "#000" }}
+          />
+          <p style={{ fontSize: 12, color: "#555" }}>
+            (portrait renders on demand via the render flow)
+          </p>
+        </div>
+      )}
     </main>
   );
 }

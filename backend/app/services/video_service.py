@@ -1,10 +1,10 @@
 """Simple video renderer — first real video artifacts (roadmap Sprint 5.1).
 
-Storytelling first, not photorealism: title cards + offline TTS voice +
+Storytelling first, not photorealism: character cards + offline TTS voice +
 SRT captions + FFmpeg Ken Burns assembly into a 9:16 Short. Every
 intermediate artifact is kept for debugging (guide §11).
 
-Character visuals land in Sprint 5.2; this renderer uses stylized cards.
+Character visuals come from the Sprint 5.2 identity renderer.
 """
 import json
 import shutil
@@ -15,8 +15,10 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy.orm import Session
 
+from ..models.creator import Creator
 from ..models.episode import Episode, EpisodeStatus
 from ..models.scene import Scene
+from .character_service import identity_for_creator, render_identity_card, render_portrait
 
 WIDTH, HEIGHT, FPS = 1080, 1920, 30
 MIN_DURATION = 15.0  # Shorts verification window: 15-45s
@@ -24,6 +26,12 @@ MAX_DURATION = 45.0
 SCENE_LEAD = 0.4  # silence before narration starts
 SCENE_TAIL = 0.4  # hold after narration ends
 FONT_PATH = r"C:\Windows\Fonts\arial.ttf"
+
+
+def render_episode_identity_preview(identity) -> Path:
+    """Identity preview portrait under media/portraits/ (Sprint 5.2)."""
+    folder = Path("media/portraits") / f"creator_{identity.creator_id}_{identity.version}"
+    return render_portrait(identity, folder / "portrait.png")
 
 
 class VideoError(RuntimeError):
@@ -216,6 +224,7 @@ def render_short(
     voice_id: str | None = None,
     rate: int = 175,
     series_name: str = "",
+    identity=None,
 ) -> dict:
     """Render scenes [{title, text}] into a 15-45s Short. Returns the manifest."""
     if not scenes:
@@ -231,14 +240,24 @@ def render_short(
         synthesize_speech(text, wav, rate=rate, voice_id=voice_id)
         audio_dur = probe_duration(wav)
         card = out_dir / f"scene_{i + 1:02d}.png"
-        make_scene_card(
-            scene.get("title") or f"Scene {i + 1}",
-            text[:120],
-            card,
-            index=i,
-            total=len(scenes),
-            series_name=series_name,
-        )
+        if identity is not None:
+            render_identity_card(
+                identity,
+                scene.get("title") or f"Scene {i + 1}",
+                text[:120],
+                card,
+            )
+            card_version = getattr(identity, "version", "identity-v1")
+        else:
+            make_scene_card(
+                scene.get("title") or f"Scene {i + 1}",
+                text[:120],
+                card,
+                index=i,
+                total=len(scenes),
+                series_name=series_name,
+            )
+            card_version = "card-v1"
         planned.append(
             {"title": scene.get("title") or f"Scene {i + 1}", "text": text,
              "wav": wav, "card": card, "duration": audio_dur + SCENE_LEAD + SCENE_TAIL}
@@ -279,6 +298,7 @@ def render_short(
         "fps": FPS,
         "voice_id": voice_id,
         "rate": rate,
+        "card_version": card_version,
         "total_duration": round(final_duration, 2),
         "scenes": [
             {
@@ -334,12 +354,23 @@ def render_episode_video(
     episode.status = EpisodeStatus.RENDERING
     db.commit()
 
+    identity = None
+    try:
+        from ..models.creator import Creator
+
+        creator = db.get(Creator, episode.creator_id)
+        if creator is not None and creator.active:
+            identity = identity_for_creator(db, creator)
+    except Exception:
+        identity = None  # identity is optional; fall back to plain cards
+
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     out_dir = Path(base_dir) / f"episode_{episode_id}" / stamp
     try:
         manifest = render_short(
             scenes, out_dir, voice_id=voice_id, rate=rate,
             series_name=f"episode {episode.episode_number}",
+            identity=identity,
         )
     except Exception:
         episode.status = EpisodeStatus.REVIEW

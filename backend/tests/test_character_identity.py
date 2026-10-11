@@ -212,6 +212,8 @@ def test_episode_render_uses_identity(tmp_path, monkeypatch, client):
         f"/api/series/{series['id']}/generate-episode", json={"variant": 0}
     ).json()["episode"]
 
+    approve = client.post(f"/api/episodes/{episode['id']}/approve", json={})
+    assert approve.status_code == 200
     res = client.post(f"/api/episodes/{episode['id']}/render", json={})
     assert res.status_code == 200, res.text
     assert res.json()["status"] == "READY"

@@ -139,6 +139,8 @@ def test_render_episode_video_marks_ready(client, tmp_path, monkeypatch):
         f"/api/series/{series['id']}/generate-episode", json={"variant": 0}
     ).json()["episode"]
 
+    res = client.post(f"/api/episodes/{episode['id']}/approve", json={})
+    assert res.status_code == 200
     res = client.post(f"/api/episodes/{episode['id']}/render", json={})
     assert res.status_code == 200, res.text
     body = res.json()

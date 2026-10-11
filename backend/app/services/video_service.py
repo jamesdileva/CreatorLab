@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from ..models.creator import Creator
 from ..models.episode import Episode, EpisodeStatus
+from ..models.render import AssetKind, Render, RenderStatus, SceneAsset
 from ..models.scene import Scene
 from .character_service import identity_for_creator, render_identity_card, render_portrait
 
@@ -225,6 +226,7 @@ def render_short(
     rate: int = 175,
     series_name: str = "",
     identity=None,
+    episode_id: int | None = None,
 ) -> dict:
     """Render scenes [{title, text}] into a 15-45s Short. Returns the manifest."""
     if not scenes:
@@ -299,6 +301,7 @@ def render_short(
         "voice_id": voice_id,
         "rate": rate,
         "card_version": card_version,
+        "episode_id": episode_id,
         "total_duration": round(final_duration, 2),
         "scenes": [
             {
@@ -315,6 +318,32 @@ def render_short(
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
+
+
+def _episode_scenes(db: Session, episode: Episode) -> list[dict]:
+    rows = (
+        db.query(Scene)
+        .filter(Scene.episode_id == episode.id)
+        .order_by(Scene.scene_number)
+        .all()
+    )
+    if rows:
+        scenes = [
+            {"title": r.title or f"Scene {r.scene_number}",
+             "text": r.direction or episode.premise}
+            for r in rows
+        ]
+        # narration prefers the scene direction; fall back to script lines
+        if episode.script.strip():
+            chunks = [c.strip() for c in episode.script.split("\n") if c.strip()]
+            for i, scene in enumerate(scenes):
+                if i < len(chunks):
+                    scene["text"] = chunks[i]
+        return scenes
+    text = episode.script.strip() or episode.premise.strip()
+    if not text:
+        raise VideoError("episode has no scenes and no script/premise to narrate")
+    return [{"title": episode.title, "text": text}]
 
 
 def render_episode_video(
@@ -356,8 +385,6 @@ def render_episode_video(
 
     identity = None
     try:
-        from ..models.creator import Creator
-
         creator = db.get(Creator, episode.creator_id)
         if creator is not None and creator.active:
             identity = identity_for_creator(db, creator)
@@ -382,3 +409,104 @@ def render_episode_video(
     episode.status = EpisodeStatus.READY
     db.commit()
     return manifest
+
+
+# ---------- Sprint 5.3: approval gate + tracked pipeline ----------
+
+
+def approve_episode(db: Session, episode_id: int) -> Episode:
+    """Human approval gate: renders only run on APPROVED episodes (arch §5.6)."""
+    episode = db.get(Episode, episode_id)
+    if episode is None:
+        raise VideoError("episode not found")
+    if episode.status in (EpisodeStatus.PUBLISHED, EpisodeStatus.ARCHIVED):
+        raise VideoError(f"cannot approve an episode in status {episode.status.value}")
+    episode.status = EpisodeStatus.APPROVED
+    db.commit()
+    db.refresh(episode)
+    return episode
+
+
+def reject_episode(db: Session, episode_id: int) -> Episode:
+    episode = db.get(Episode, episode_id)
+    if episode is None:
+        raise VideoError("episode not found")
+    if episode.status in (EpisodeStatus.PUBLISHED, EpisodeStatus.ARCHIVED):
+        raise VideoError(f"cannot reject an episode in status {episode.status.value}")
+    episode.status = EpisodeStatus.REVIEW
+    db.commit()
+    db.refresh(episode)
+    return episode
+
+
+def render_episode_pipeline(
+    db: Session,
+    episode_id: int,
+    voice_id: str | None = None,
+    rate: int = 175,
+    base_dir: Path | str = "media/generated",
+) -> Render:
+    """Episode -> scenes -> assets -> voice -> captions -> render, all recorded.
+
+    Requires APPROVED status; records a Render row and per-stage SceneAsset rows.
+    """
+    episode = db.get(Episode, episode_id)
+    if episode is None:
+        raise VideoError("episode not found")
+    if episode.status != EpisodeStatus.APPROVED:
+        raise VideoError("episode must be approved before rendering")
+
+    render = Render(episode_id=episode_id, status=RenderStatus.RENDERING.value,
+                    voice_id=voice_id or "")
+    db.add(render)
+    db.flush()
+    render_id = render.id
+    episode.status = EpisodeStatus.RENDERING
+    db.commit()
+
+    scenes = _episode_scenes(db, episode)
+    identity = None
+    creator = db.get(Creator, episode.creator_id)
+    if creator is not None and creator.active:
+        identity = identity_for_creator(db, creator)
+
+        out_dir = Path(base_dir) / f"episode_{episode_id}" / f"render_{render_id}"
+        try:
+            manifest = render_short(
+                scenes, out_dir, voice_id=voice_id, rate=rate,
+                series_name=f"episode {episode.episode_number}",
+                identity=identity, episode_id=episode_id,
+            )
+        except Exception as exc:
+            render = db.get(Render, render_id)
+            render.status = RenderStatus.FAILED.value
+            render.error = str(exc)[:500]
+            episode.status = EpisodeStatus.REVIEW
+            db.commit()
+            raise
+
+        render = db.get(Render, render_id)
+        render.artifact_dir = str(out_dir)
+        render.total_duration = manifest["total_duration"]
+        render.card_version = manifest.get("card_version", "card-v1")
+        render.identity_version = (identity.version if identity else "")
+        for i, scene in enumerate(manifest["scenes"], start=1):
+            db.add(SceneAsset(render_id=render.id, scene_number=i,
+                              kind=AssetKind.CARD.value,
+                              path=(out_dir / scene["card"]).as_posix(),
+                              duration=scene["duration"]))
+            db.add(SceneAsset(render_id=render.id, scene_number=i,
+                              kind=AssetKind.VOICE.value,
+                              path=(out_dir / scene["wav"]).as_posix()))
+        db.add(SceneAsset(render_id=render.id, kind=AssetKind.CAPTIONS.value,
+                          path=(out_dir / manifest["captions"]).as_posix()))
+        db.add(SceneAsset(render_id=render.id, kind=AssetKind.VIDEO.value,
+                          path=(out_dir / manifest["video"]).as_posix(),
+                          duration=manifest["total_duration"]))
+        db.add(SceneAsset(render_id=render.id, kind=AssetKind.MANIFEST.value,
+                          path=(out_dir / "manifest.json").as_posix()))
+        render.status = RenderStatus.READY.value
+        episode.status = EpisodeStatus.READY
+        db.commit()
+        db.refresh(render)
+        return render

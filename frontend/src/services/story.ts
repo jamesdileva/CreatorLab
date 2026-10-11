@@ -71,6 +71,7 @@ export interface RenderResult {
   manifest_url: string;
   total_duration: number;
   scene_count: number;
+  render_id: number;
 }
 
 export const renderEpisode = (id: number): Promise<RenderResult> =>
@@ -78,6 +79,32 @@ export const renderEpisode = (id: number): Promise<RenderResult> =>
     method: "POST",
     body: JSON.stringify({}),
   });
+
+// approval gate (Sprint 5.3)
+export const approveEpisode = (id: number): Promise<{ status: string }> =>
+  req<{ status: string }>(`${ROOT}/api/episodes/${id}/approve`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
+export const rejectEpisode = (id: number): Promise<{ status: string }> =>
+  req<{ status: string }>(`${ROOT}/api/episodes/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
+export interface RenderRecord {
+  id: number;
+  episode_id: number;
+  status: string;
+  card_version: string;
+  identity_version: string;
+  total_duration: number;
+  created_at: string;
+}
+
+export const listEpisodeRenders = (id: number): Promise<RenderRecord[]> =>
+  req<RenderRecord[]>(`${ROOT}/api/episodes/${id}/renders`);
 
 // scenes
 export const listScenes = (episodeId: number): Promise<Scene[]> =>

@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
+  approveEpisode,
   archiveEpisode,
   createScene,
   deleteScene,
   getEpisode,
+  listEpisodeRenders,
   listScenes,
+  rejectEpisode,
   renderEpisode,
   updateEpisode,
 } from "../services/story";
-import type { RenderResult } from "../services/story";
+import type { RenderRecord, RenderResult } from "../services/story";
 import { EPISODE_STATUSES } from "../types/story";
 import type { Episode, Scene } from "../types/story";
 
@@ -27,15 +30,39 @@ export default function EpisodeDetail() {
   const [sceneDirection, setSceneDirection] = useState("");
   const [render, setRender] = useState<RenderResult | null>(null);
   const [rendering, setRendering] = useState(false);
+  const [renders, setRenders] = useState<RenderRecord[]>([]);
 
   const refresh = () => {
     getEpisode(episodeId).then(setEpisode).catch((e) =>
       setError(e instanceof Error ? e.message : "load failed")
     );
     listScenes(episodeId).then(setScenes).catch(() => setScenes([]));
+    listEpisodeRenders(episodeId).then(setRenders).catch(() => setRenders([]));
   };
 
   useEffect(refresh, [episodeId]);
+
+  const onApprove = async () => {
+    try {
+      const res = await approveEpisode(episodeId);
+      const refreshed = await getEpisode(episodeId);
+      setEpisode(refreshed);
+      setError(res.status === "APPROVED" ? "" : "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "approve failed");
+    }
+  };
+
+  const onReject = async () => {
+    try {
+      await rejectEpisode(episodeId);
+      const refreshed = await getEpisode(episodeId);
+      setEpisode(refreshed);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "reject failed");
+    }
+  };
 
   const onCreateScene = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,9 +149,40 @@ export default function EpisodeDetail() {
       {episode.status !== "ARCHIVED" && (
         <button onClick={() => void onArchive()}>archive</button>
       )}{" "}
-      <button disabled={rendering} onClick={() => void onRender()}>
+      {episode.status !== "APPROVED" &&
+        episode.status !== "RENDERING" &&
+        episode.status !== "READY" &&
+        episode.status !== "PUBLISHED" &&
+        episode.status !== "ARCHIVED" && (
+          <button onClick={() => void onApprove()}>approve</button>
+        )}{" "}
+      {(episode.status === "APPROVED" || episode.status === "REVIEW") && (
+        <button onClick={() => void onReject()}>reject</button>
+      )}{" "}
+      <button disabled={rendering || episode.status !== "APPROVED"} onClick={() => void onRender()}>
         {rendering ? "rendering…" : "render short"}
       </button>
+      {episode.status !== "APPROVED" && (
+        <small style={{ marginLeft: 8, color: "#666" }}>
+          (approval required before rendering)
+        </small>
+      )}
+
+      {renders.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <h3>Renders</h3>
+          <ul>
+            {renders.map((r) => (
+              <li key={r.id}>
+                #{r.id} [{r.status}] {r.total_duration.toFixed(1)}s · cards{" "}
+                {r.card_version}
+                {r.identity_version ? ` · identity ${r.identity_version}` : ""} ·{" "}
+                {r.created_at}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {render && (
         <div style={{ marginTop: 12 }}>

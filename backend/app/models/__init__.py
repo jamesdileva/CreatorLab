@@ -5,6 +5,7 @@ from .concept_score import ConceptScore, HumanRanking
 from .creator import Creator
 from .creator_memory import CreatorMemory, MemoryType
 from .episode import Episode, EpisodeStatus
+from .render import AssetKind, Render, RenderStatus
 from .scene import Scene
 from .series import Series, SeriesStatus
 from .simulation import (
@@ -21,6 +22,7 @@ from .viewer import AUDIENCE_VERSION, SyntheticViewer
 __all__ = [
     "CharacterIdentity",
     "AUDIENCE_VERSION",
+    "AssetKind",
     "RANKING_VERSION",
     "REACTION_VERSION",
     "Canon",
@@ -35,6 +37,8 @@ __all__ = [
     "HumanRanking",
     "MemoryType",
     "RankingRun",
+    "Render",
+    "RenderStatus",
     "Scene",
     "Series",
     "SeriesStatus",

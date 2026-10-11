@@ -21,6 +21,7 @@ from ..models.concept import Concept, ConceptSet
 from ..models.concept_score import ConceptScore, HumanRanking
 from ..models.creator import Creator
 from ..models.episode import Episode, EpisodeStatus
+from ..models.render import Render, SceneAsset
 from ..models.scene import Scene
 from ..models.series import Series, SeriesStatus
 from ..models.story_thread import StoryThread, ThreadStatus
@@ -36,7 +37,12 @@ from ..services.scoring_service import (
     record_human_ranking,
     score_concept_set,
 )
-from ..services.video_service import VideoError, render_episode_video
+from ..services.video_service import (
+    VideoError,
+    approve_episode,
+    reject_episode,
+    render_episode_pipeline,
+)
 
 router = APIRouter(tags=["story-universe"])
 
@@ -313,6 +319,66 @@ class RenderOut(BaseModel):
     manifest_url: str
     total_duration: float
     scene_count: int
+    render_id: int
+
+
+class ApproveOut(BaseModel):
+    episode_id: int
+    status: str
+
+
+@router.post("/api/episodes/{episode_id}/approve", response_model=ApproveOut)
+def approve_episode_endpoint(episode_id: int, db: Session = Depends(get_db)) -> ApproveOut:
+    """Human approval gate — required before rendering (architecture §5.6)."""
+    _episode_or_404(db, episode_id)
+    try:
+        episode = approve_episode(db, episode_id)
+    except VideoError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return ApproveOut(episode_id=episode.id, status=episode.status.value)
+
+
+@router.post("/api/episodes/{episode_id}/reject", response_model=ApproveOut)
+def reject_episode_endpoint(episode_id: int, db: Session = Depends(get_db)) -> ApproveOut:
+    _episode_or_404(db, episode_id)
+    try:
+        episode = reject_episode(db, episode_id)
+    except VideoError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return ApproveOut(episode_id=episode.id, status=episode.status.value)
+
+
+class RenderRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    episode_id: int
+    status: str
+    render_version: str
+    card_version: str
+    identity_version: str
+    voice_id: str
+    total_duration: float
+    artifact_dir: str
+    error: str
+    created_at: datetime
+
+
+class AssetRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    render_id: int
+    scene_number: int
+    kind: str
+    path: str
+    duration: float
+    created_at: datetime
+
+
+class RenderDetailOut(BaseModel):
+    render: RenderRead
+    assets: list[AssetRead]
 
 
 @router.post("/api/episodes/{episode_id}/render", response_model=RenderOut)
@@ -321,29 +387,65 @@ def render_episode(
 ) -> RenderOut:
     _episode_or_404(db, episode_id)
     try:
-        manifest = render_episode_video(
+        render = render_episode_pipeline(
             db, episode_id, voice_id=payload.voice_id, rate=payload.rate
         )
     except VideoError as exc:
         message = str(exc)
+        gate = "must be approved" in message
+        soft = (
+            gate
+            or "exceeds" in message
+            or "no scenes" in message
+            or "no script" in message
+        )
         code = (
             status.HTTP_422_UNPROCESSABLE_ENTITY
-            if "exceeds" in message or "no scenes" in message or "no narration" in message
+            if soft
             else status.HTTP_502_BAD_GATEWAY
         )
         raise HTTPException(status_code=code, detail=message)
-    run_dir = f"media/generated/episode_{episode_id}"
-    latest = sorted(Path(run_dir).iterdir(), key=lambda p: p.name)[-1].name
-    base = f"/media/generated/episode_{episode_id}/{latest}"
+    card_count = (
+        db.query(SceneAsset)
+        .filter(SceneAsset.render_id == render.id, SceneAsset.kind == "card")
+        .count()
+    )
+    base = f"/media/generated/episode_{episode_id}/render_{render.id}"
     return RenderOut(
         episode_id=episode_id,
-        status="READY",
+        status=render.status,
         video_url=f"{base}/final.mp4",
         captions_url=f"{base}/captions.srt",
         manifest_url=f"{base}/manifest.json",
-        total_duration=manifest["total_duration"],
-        scene_count=len(manifest["scenes"]),
+        total_duration=render.total_duration,
+        scene_count=card_count,
+        render_id=render.id,
     )
+
+
+@router.get("/api/episodes/{episode_id}/renders", response_model=list[RenderRead])
+def list_episode_renders(episode_id: int, db: Session = Depends(get_db)) -> list:
+    _episode_or_404(db, episode_id)
+    return (
+        db.query(Render)
+        .filter(Render.episode_id == episode_id)
+        .order_by(Render.id.desc())
+        .all()
+    )
+
+
+@router.get("/api/renders/{render_id}", response_model=RenderDetailOut)
+def get_render(render_id: int, db: Session = Depends(get_db)) -> RenderDetailOut:
+    render = db.get(Render, render_id)
+    if render is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="render not found")
+    assets = (
+        db.query(SceneAsset)
+        .filter(SceneAsset.render_id == render_id)
+        .order_by(SceneAsset.scene_number, SceneAsset.id)
+        .all()
+    )
+    return RenderDetailOut(render=render, assets=assets)
 
 
 # ---------- Scenes ----------

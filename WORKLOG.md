@@ -283,3 +283,24 @@ distinct portraits, five-scene consistency (character region pixel-identical),
 identity snapshot, episode render through identity). Live: 5 Hank cards →
 scene-vs-scene diff 0.0, Hank-vs-Alex diff 0.157. `npm run build` OK.
 **Commit:** Sprint 5.2 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 5.3 — Episode-to-Video Pipeline
+
+**Plan:** Connect Episode → scenes → assets → voice → captions → render as a
+tracked pipeline behind the human approval gate (roadmap 5.3, arch §5.6).
+**Scope:** `models/render.py` (Render + SceneAsset with per-stage provenance),
+`render_episode_pipeline` service (APPROVED gate, Render row, per-stage asset
+rows, READY/FAILED transitions, REVIEW on failure), endpoints
+(approve/reject/render/list renders/render detail), frontend approve/reject
+buttons + render history.
+**Implement:** models/service/endpoints/UI + 7 tests (updated 2 older tests to
+approve-first per the new gate).
+**Verify:** `pytest` → **142 passed** (7 new: full pipeline from approved
+episode, render-before-approval 422, approve→reject, published-episode guards,
+artifact provenance (3 cards + 3 voices + captions + video + manifest), render
+history + 404s, failed render recorded → REVIEW). Live: render-before-approval
+422 → approve → render READY 15.0s/3 scenes, video exists, render recorded
+`identity-v1`, 9 assets, episode READY. `npm run build` OK.
+**Commit:** Sprint 5.3 commit + push to `main`.

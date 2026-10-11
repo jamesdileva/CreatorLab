@@ -12,7 +12,14 @@ from sqlalchemy.orm import Session
 
 from ..models.concept import Concept
 from ..models.episode import Episode
-from ..models.simulation import REACTION_VERSION, SimulationRun, TargetType, ViewerReaction
+from ..models.simulation import (
+    RANKING_VERSION,
+    REACTION_VERSION,
+    RankingRun,
+    SimulationRun,
+    TargetType,
+    ViewerReaction,
+)
 from ..models.viewer import AUDIENCE_VERSION, SyntheticViewer
 from .audience_service import _words, baseline_interest, seed_audience
 
@@ -115,11 +122,80 @@ def _resolve_content(db: Session, target_type: str, target_id: int) -> tuple[str
     raise ValueError(f"target_type must be one of {[t.value for t in TargetType]}")
 
 
+RANK_METRICS = (
+    "watch_probability",
+    "like_probability",
+    "comment_probability",
+    "share_probability",
+    "follow_probability",
+)
+
+
 @dataclass
 class RunResult:
     run: SimulationRun
     aggregate: dict
     reactions: list[ViewerReaction]
+
+
+@dataclass
+class RankedCandidate:
+    candidate_id: int
+    score: float
+    run_id: int
+
+
+@dataclass
+class RankingResult:
+    run: RankingRun
+    ranked: list[RankedCandidate]
+
+
+def rank_candidates(
+    db: Session,
+    candidate_type: str,
+    candidate_ids: list[int],
+    metric: str = "watch_probability",
+    seed: int = 0,
+) -> RankingResult:
+    """Run every candidate through the same audience, then order by metric.
+
+    Deterministic: reruns with the same inputs produce the same ranking, with
+    candidate id as the tiebreak so the order is always total.
+    """
+    if candidate_type not in {t.value for t in TargetType}:
+        raise ValueError(f"candidate_type must be one of {[t.value for t in TargetType]}")
+    if metric not in RANK_METRICS:
+        raise ValueError(f"metric must be one of {list(RANK_METRICS)}")
+    if len(candidate_ids) < 2:
+        raise ValueError("ranking needs at least two candidates")
+    if len(set(candidate_ids)) != len(candidate_ids):
+        raise ValueError("candidate_ids must be unique")
+
+    scored: list[RankedCandidate] = []
+    for candidate_id in candidate_ids:
+        result = run_simulation(db, candidate_type, candidate_id, seed=seed)
+        score = result.aggregate["means"][metric]
+        scored.append(RankedCandidate(candidate_id=candidate_id, score=score, run_id=result.run.id))
+
+    scored.sort(key=lambda c: (-c.score, c.candidate_id))
+
+    first_run = db.get(SimulationRun, scored[0].run_id)
+    run = RankingRun(
+        candidate_type=candidate_type,
+        candidate_ids=list(candidate_ids),
+        metric=metric,
+        ranking=[c.candidate_id for c in scored],
+        simulation_run_ids=[c.run_id for c in scored],
+        model="stub/deterministic-v1",
+        prompt_version=RANKING_VERSION,
+        audience_version=AUDIENCE_VERSION,
+        viewer_count=first_run.viewer_count if first_run else 0,
+    )
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    return RankingResult(run=run, ranked=scored)
 
 
 def aggregate_reactions(reactions: list[ViewerReaction]) -> dict:

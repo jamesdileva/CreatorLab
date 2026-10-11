@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import RankingRunner from "../components/RankingRunner";
 import SimulationRunner from "../components/SimulationRunner";
 
 const env = import.meta.env as Record<string, string | undefined>;
@@ -140,6 +141,7 @@ export default function Audience() {
             </tbody>
           </table>
           <SimulationRunner />
+          <RankingRunner />
         </>
       )}
     </main>

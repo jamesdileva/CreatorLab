@@ -14,6 +14,7 @@ from ..core.database import Base
 from .viewer import AUDIENCE_VERSION
 
 REACTION_VERSION = "reaction-v1"
+RANKING_VERSION = "ranking-v1"
 
 
 class TargetType(str, enum.Enum):
@@ -56,6 +57,29 @@ class ViewerReaction(Base):
     share_probability: Mapped[float] = mapped_column(Float, nullable=False)
     follow_probability: Mapped[float] = mapped_column(Float, nullable=False)
     reason_codes: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False
+    )
+
+
+class RankingRun(Base):
+    """One ranking of several candidates through the same audience (Sprint 4.3)."""
+
+    __tablename__ = "ranking_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    run_uuid: Mapped[str] = mapped_column(
+        String(36), default=lambda: str(uuid.uuid4()), unique=True, nullable=False
+    )
+    candidate_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    candidate_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
+    metric: Mapped[str] = mapped_column(String(32), default="watch_probability")
+    ranking: Mapped[list[int]] = mapped_column(JSON, default=list)
+    simulation_run_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
+    model: Mapped[str] = mapped_column(String(64), default="stub/deterministic-v1")
+    prompt_version: Mapped[str] = mapped_column(String(64), default=RANKING_VERSION)
+    audience_version: Mapped[str] = mapped_column(String(32), default=AUDIENCE_VERSION)
+    viewer_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

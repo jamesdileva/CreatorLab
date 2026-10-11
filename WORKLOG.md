@@ -224,3 +224,22 @@ validation/404s, affinity→follow). Live: same episode → watch 0.515/like
 0.273/comment 0.06/share 0.033/follow 0.047, rerun identical, 4 distinct watch
 levels stored. `npm run build` OK. Dev DB cleaned.
 **Commit:** Sprint 4.2 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 4.3 — Candidate Ranking
+
+**Plan:** Rank several candidates through the same population and answer
+"which candidate first?" (roadmap 4.3) — completes Phase 4 audience MVP.
+**Scope:** `RankingRun` model (candidates, metric, ordered ranking, linked sim
+runs, reproducibility metadata), `rank_candidates` service (one sim run per
+candidate, same audience, candidate-id tiebreak), endpoints (rank/list/detail),
+`RankingRunner` UI. Also fixed literal-vs-parameterized route shadowing
+(`/simulations/rankings` before `/simulations/{run_id}`).
+**Implement:** model/service/endpoints/UI + 7 tests.
+**Verify:** `pytest` → **117 passed** (7 new: ordered 4-candidate ranking,
+deterministic rerun, linked sim runs with 25 reactions each, persistence +
+detail, alternate metric, episode ranking, validation/404s). Live:
+`#2 (0.652) > #4 (0.593) > #1 (0.584) > #3 (0.583)` — roadmap's A>C>B>D shape,
+rerun identical. `npm run build` OK. Dev DB cleaned.
+**Commit:** Sprint 4.3 commit + push to `main`.

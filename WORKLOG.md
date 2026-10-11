@@ -123,3 +123,24 @@ safety BLOCK; contradiction/repetition/canon-not-referenced REVIEW flags; persis
 + numbering; prompt/model recorded). Live: 5 generations → Ep1-5 all PASS, history
 ordered, distinct premises. `npm run build` OK. Dev DB cleaned.
 **Commit:** Sprint 2.2 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 2.3 — Running Jokes and Story Threads
+
+**Plan:** Episodes resolve introduced threads naturally (roadmap 2.3).
+**Scope:** `EpisodeDraft.resolves_thread` (exact-title contract), evaluation flag
+`thread_not_found` for hallucinated resolutions (REVIEW, never mutates state),
+service resolution logic (open-thread match → RESOLVED + resolved_episode_id,
+`resolved_threads` in response), stub callback archetype (variant %6 ==5),
+thread prompt instruction, frontend thread badges + resolved notice.
+**Implement:** evaluation/base/stub/structured_output/service/endpoint/frontend.
+**Verify:** `pytest` → **70 passed** (5 new: roadmap path — introduce in Ep1,
+OPEN through Ep2-3, RESOLVED in Ep4 linked to Ep4; no-thread case resolves nothing;
+hallucinated title flagged; real resolution accepted; multiple threads resolve only
+the claimed one). Live: Ep1 thread → open through Ep3 → Ep4 RESOLVED
+resolved_episode_id=4, history 1-4. `npm run build` OK. Dev DB cleaned.
+**Note on prompts:** `episode_prompt_v1` was extended this sprint (adds the
+resolves_thread instruction) BEFORE any experiment record referenced it, so no
+experiment's reproducibility is affected — noted per guide §26.
+**Commit:** Sprint 2.3 commit + push to `main`.

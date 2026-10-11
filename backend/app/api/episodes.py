@@ -566,6 +566,7 @@ class GenerateEpisodeOut(BaseModel):
     model: str
     canon_used: list[str]
     memories_used: list[str]
+    resolved_threads: list[str]
 
 
 @router.post("/api/series/{series_id}/generate-episode", response_model=GenerateEpisodeOut)
@@ -633,4 +634,5 @@ def generate_episode_endpoint(
         model=result.model,
         canon_used=result.canon_used,
         memories_used=result.memories_used,
+        resolved_threads=result.resolved_threads,
     )

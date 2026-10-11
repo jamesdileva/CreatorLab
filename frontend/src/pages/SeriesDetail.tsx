@@ -191,6 +191,11 @@ export default function SeriesDetail() {
             <strong>{lastGenerated.evaluation_status}</strong> — Ep{" "}
             {lastGenerated.episode.episode_number}: {lastGenerated.draft.premise}
           </p>
+          {lastGenerated.resolved_threads.map((t) => (
+            <p key={t}>
+              <strong>resolved thread:</strong> {t}
+            </p>
+          ))}
           <p>{lastGenerated.draft.synopsis}</p>
           <ul>
             {lastGenerated.draft.scenes.map((s, i) => (
@@ -225,17 +230,23 @@ export default function SeriesDetail() {
         <p>none yet</p>
       ) : (
         <ul>
-          {threads.map((t) => (
-            <li key={t.id}>
-              <strong>{t.status}</strong> — {t.title}
-              {t.status === "OPEN" && (
-                <>
-                  {" "}
-                  <button onClick={() => void onResolveThread(t)}>resolve w/ last ep</button>
-                </>
-              )}
-            </li>
-          ))}
+          {threads.map((t) => {
+            const introEp = episodes.find((e) => e.id === t.introduced_episode_id);
+            const resolvedEp = episodes.find((e) => e.id === t.resolved_episode_id);
+            return (
+              <li key={t.id}>
+                <strong>{t.status}</strong> — {t.title}
+                {introEp && <> (introduced Ep {introEp.episode_number})</>}
+                {resolvedEp && <> (resolved Ep {resolvedEp.episode_number})</>}
+                {t.status === "OPEN" && (
+                  <>
+                    {" "}
+                    <button onClick={() => void onResolveThread(t)}>resolve w/ last ep</button>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
       <form onSubmit={(e) => void onCreateThread(e)}>

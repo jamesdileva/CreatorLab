@@ -96,25 +96,50 @@ def _episode_JSON(request: GenerateRequest) -> str:
                 ("The prize", f"{name} shares it, and the competitor breaks down."),
             ],
         },
+        {
+            # callback archetype — resolves the first open thread (deterministic)
+            "callback": True,
+            "premise": (
+                "The promise everyone remembers finally comes due, and the answer "
+                "is not what the crowd expects."
+            ),
+            "synopsis": (
+                "An old promise is revisited, a choice is made in front of "
+                "witnesses, and the story moves forward."
+            ),
+            "scenes": [
+                ("The promise resurfaces", "Someone brings up the old promise."),
+                ("The choice", "The decision is made, plainly, in front of everyone."),
+                ("The aftermath", "Things are different now, and better for it."),
+            ],
+        },
     ]
     archetype = archetypes[request.variant % len(archetypes)]
     scenes = [
         {"title": title, "direction": direction}
         for title, direction in archetype["scenes"]
     ]
+    thread_echo = ""
+    resolves_thread = None
+    if archetype.get("callback") and request.threads:
+        resolves_thread = request.threads[0]
+        thread_echo = f"\n{name}: About that promise — {resolves_thread}. Here's where I stand."
     script_lines = [
         f"EPISODE {request.variant + 1} — {name.upper()}",
-        f"INT. THE PLACE — DAY",
+        "INT. THE PLACE — DAY",
         f"{name}: {archetype['premise']}",
         f"NARRATION: {archetype['synopsis']}",
         f"{name}: And just so it's on record: {canon}",
-        "END.",
     ]
+    if thread_echo:
+        script_lines.append(thread_echo.strip())
+    script_lines.append("END.")
     draft = {
         "premise": archetype["premise"],
         "synopsis": archetype["synopsis"],
         "scenes": scenes,
         "script": "\n".join(script_lines),
+        "resolves_thread": resolves_thread,
     }
     return "```json\n" + json.dumps(draft) + "\n```"
 

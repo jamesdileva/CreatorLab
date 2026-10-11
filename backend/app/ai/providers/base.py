@@ -23,6 +23,7 @@ class GenerateRequest:
     user_message: str
     persona: PersonaHint | None = None
     memories: list[str] = field(default_factory=list)
+    threads: list[str] = field(default_factory=list)
     response_format: str = "text"  # "text" | "json"
     variant: int = 0  # deterministic archetype selection
     temperature: float = 0.7

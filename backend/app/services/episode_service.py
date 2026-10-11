@@ -42,6 +42,7 @@ class GenerationResult:
     model: str
     canon_used: list[str]
     memories_used: list[str]
+    resolved_threads: list[str]
 
 
 class EpisodeBlockedError(Exception):
@@ -121,6 +122,7 @@ def generate_episode(
                 voice_style=creator.voice_style,
             ),
             memories=memories,
+            threads=open_threads,
             response_format="json",
             variant=variant,
         )
@@ -135,12 +137,14 @@ def generate_episode(
         draft,
         canon=canon,
         previous_premises=[e.premise for e in history_rows],
+        open_threads=open_threads,
     )
 
     if evaluation.status == "BLOCK":
         raise EpisodeBlockedError(evaluation)
 
     episode = _persist(db, series, creator, next_number, draft)
+    resolved_threads = _resolve_threads(db, series, episode, open_threads, draft)
     return GenerationResult(
         draft=draft,
         evaluation=evaluation,
@@ -150,7 +154,41 @@ def generate_episode(
         model=response.model,
         canon_used=canon,
         memories_used=memories,
+        resolved_threads=resolved_threads,
     )
+
+
+def _resolve_threads(
+    db: Session,
+    series: Series,
+    episode: Episode,
+    open_thread_titles: list[str],
+    draft: EpisodeDraft,
+) -> list[str]:
+    """Mark threads the episode resolves as RESOLVED (roadmap 2.3).
+
+    Only exact title matches against threads that were open when generation
+    started count, so a hallucinated resolution never mutates state.
+    """
+    claimed = (draft.resolves_thread or "").strip().lower()
+    resolved: list[str] = []
+    if not claimed or claimed not in {t.strip().lower() for t in open_thread_titles}:
+        return resolved
+    rows = (
+        db.query(StoryThread)
+        .filter(
+            StoryThread.series_id == series.id,
+            StoryThread.status == ThreadStatus.OPEN,
+        )
+        .all()
+    )
+    for row in rows:
+        if row.title.strip().lower() == claimed:
+            row.status = ThreadStatus.RESOLVED
+            row.resolved_episode_id = episode.id
+            resolved.append(row.title)
+    db.commit()
+    return resolved
 
 
 def _episode_title(premise: str) -> str:

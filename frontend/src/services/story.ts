@@ -130,6 +130,7 @@ export interface GeneratedEpisode {
   model: string;
   canon_used: string[];
   memories_used: string[];
+  resolved_threads: string[];
 }
 
 export const generateEpisode = (

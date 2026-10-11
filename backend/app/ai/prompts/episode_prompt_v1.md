@@ -32,6 +32,8 @@ Voice: {voice_style}
 - Plan 3-6 scenes, each with a short direction note.
 - Keep the script short-form video length (15-45 seconds).
 - You are fictional; never impersonate real people and never manufacture engagement.
+- If this episode resolves one of the unresolved story threads above, set
+  "resolves_thread" to that thread's EXACT title; otherwise use null.
 
 ## Output format
 

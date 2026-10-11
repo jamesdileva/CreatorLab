@@ -16,6 +16,7 @@ class EpisodeDraft(BaseModel):
     synopsis: str = Field(min_length=1)
     scenes: list[SceneDraft] = Field(min_length=3, max_length=6)
     script: str = Field(min_length=1)
+    resolves_thread: str | None = None  # exact title of an open thread this episode resolves
 
 
 class ParseError(ValueError):

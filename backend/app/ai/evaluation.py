@@ -102,10 +102,12 @@ def evaluate_draft(
     draft: EpisodeDraft,
     canon: list[str] | None = None,
     previous_premises: list[str] | None = None,
+    open_threads: list[str] | None = None,
 ) -> Evaluation:
     issues: list[Issue] = []
     canon = canon or []
     previous_premises = previous_premises or []
+    open_threads = open_threads or []
 
     full_text = " ".join(
         [draft.premise, draft.synopsis, draft.script, *[s.title for s in draft.scenes]]
@@ -166,6 +168,18 @@ def evaluate_draft(
                     code="repetition",
                     severity=Severity.REVIEW,
                     detail=f"premise too similar to existing episode: {old!r}",
+                )
+            )
+
+    # 5. Thread resolution claims must reference a real open thread (Sprint 2.3)
+    if getattr(draft, "resolves_thread", None):
+        titles = {t.strip().lower() for t in open_threads}
+        if draft.resolves_thread.strip().lower() not in titles:
+            issues.append(
+                Issue(
+                    code="thread_not_found",
+                    severity=Severity.REVIEW,
+                    detail=f"draft claims to resolve unknown thread: {draft.resolves_thread!r}",
                 )
             )
 

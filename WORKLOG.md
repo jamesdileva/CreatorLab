@@ -325,3 +325,27 @@ edit lifecycle, 404, render attached). Live: queue→detail (3 scenes, 63 words,
 REVIEW) → sim 0.515 → edit → reject (queue stays 1) → approve (queue 0); cameo
 by real person → BLOCK. `npm run build` OK. Dev DB cleaned.
 **Commit:** Sprint 6.1 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 7.1 — YouTube OAuth
+
+**Plan:** Google OAuth 2.0 web-server flow for the YouTube Data API (roadmap
+7.1, guide §12): connect a channel and store credentials safely.
+**Scope:** `integrations/youtube/auth.py` (consent URL + state TTL, code
+exchange, refresh, channel lookup; injectable httpx client for mock testing),
+`models/youtube_account.py` (channel/oauth_reference/status/last_sync),
+`services/youtube_service.py` (token files under gitignored `secrets/`, DB
+stores references only — no secrets committed or stored raw in PG),
+`api/youtube.py` (status/start/callback/accounts), `/youtube` UI.
+Credentials copied from the CG project into local `.env` programmatically
+(never printed; values masked in all output).
+**Implement:** auth client/service/endpoints/UI + 16 tests (MockTransport).
+**Verify:** `pytest` → **168 passed** (16 new: auth URL shape/scopes/state,
+unconfigured raises, state validation, token exchange + missing-refresh +
+HTTP error paths, channel fetch, refresh keeps refresh token, persistence +
+token-file writing, status/config reporting, callback redirects incl. failure
+paths). Live with real creds: configured=true; authorize_url well-formed
+(readonly+upload scopes, offline, consent, callback redirect, state);
+accounts empty until manual consent. `npm run build` OK.
+**Commit:** Sprint 7.1 commit + push to `main`.

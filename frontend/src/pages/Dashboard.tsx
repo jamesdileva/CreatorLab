@@ -19,7 +19,8 @@ export default function Dashboard() {
         <Link to="/creators">Creators</Link>{" · "}
         <Link to="/series">Series</Link>{" · "}
         <Link to="/simulation">Simulation</Link>{" · "}
-        <Link to="/review">Review queue</Link>
+        <Link to="/review">Review queue</Link>{" · "}
+        <Link to="/youtube">YouTube</Link>
       </nav>
       <p>Episodes, simulation, and reality-gap land in later sprints.</p>
     </main>

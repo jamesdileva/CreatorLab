@@ -31,6 +31,7 @@ from ..services.episode_service import (
     GenerationResult,
     generate_episode,
 )
+from ..services.review_service import review_payload, review_queue
 from ..services.scoring_service import (
     SCORER_VERSION,
     compare_with_human,
@@ -431,6 +432,61 @@ def list_episode_renders(episode_id: int, db: Session = Depends(get_db)) -> list
         .filter(Render.episode_id == episode_id)
         .order_by(Render.id.desc())
         .all()
+    )
+
+
+# ---------- Human review queue (Sprint 6.1) ----------
+
+
+class RiskRead(BaseModel):
+    code: str
+    severity: str
+    detail: str
+
+
+class ReviewOut(BaseModel):
+    episode: dict
+    creator: dict | None
+    series: dict | None
+    scenes: list[dict]
+    latest_render: dict | None
+    simulation: dict | None
+    risks: list[RiskRead]
+    risk_status: str
+    metadata: dict
+
+
+class QueueItemRead(BaseModel):
+    id: int
+    title: str
+    episode_number: int
+    status: str
+    series_id: int
+    created_at: datetime
+
+
+@router.get("/api/review-queue", response_model=list[QueueItemRead])
+def list_review_queue(db: Session = Depends(get_db)) -> list[Episode]:
+    return review_queue(db)
+
+
+@router.get("/api/review-queue/{episode_id}", response_model=ReviewOut)
+def get_review_detail(episode_id: int, db: Session = Depends(get_db)) -> ReviewOut:
+    episode = _episode_or_404(db, episode_id)
+    payload = review_payload(db, episode)
+    return ReviewOut(
+        episode=payload.episode,
+        creator=payload.creator,
+        series=payload.series,
+        scenes=payload.scenes,
+        latest_render=payload.latest_render,
+        simulation=payload.simulation,
+        risks=[
+            RiskRead(code=r.code, severity=r.severity, detail=r.detail)
+            for r in payload.risks
+        ],
+        risk_status=payload.status,
+        metadata=payload.metadata,
     )
 
 

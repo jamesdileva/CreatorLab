@@ -5,6 +5,7 @@ import CreatorDetail from "./pages/CreatorDetail";
 import SeriesList from "./pages/SeriesList";
 import SeriesDetail from "./pages/SeriesDetail";
 import EpisodeDetail from "./pages/EpisodeDetail";
+import Review from "./pages/Review";
 import Audience from "./pages/Audience";
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
       <Route path="/series" element={<SeriesList />} />
       <Route path="/series/:id" element={<SeriesDetail />} />
       <Route path="/episodes/:id" element={<EpisodeDetail />} />
+      <Route path="/review" element={<Review />} />
       <Route path="/simulation" element={<Audience />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

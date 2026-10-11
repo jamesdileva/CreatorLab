@@ -304,3 +304,24 @@ history + 404s, failed render recorded → REVIEW). Live: render-before-approval
 422 → approve → render READY 15.0s/3 scenes, video exists, render recorded
 `identity-v1`, 9 assets, episode READY. `npm run build` OK.
 **Commit:** Sprint 5.3 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 6.1 — Approval Queue
+
+**Plan:** The human review screen with script, video, simulation results, risks
+and metadata; approve/reject/edit (roadmap 6.1, guide §19).
+**Scope:** `services/review_service.py` (risk screen: real-person BLOCK,
+copyright BLOCK, safety BLOCK, sensitive topics/repetition REVIEW,
+synthetic-media disclosure always REVIEW; full review payload + queue),
+endpoints `GET /api/review-queue` + `GET /api/review-queue/{id}` (kept in
+`api/episodes.py` per arch §8), `/review` page with queue, detail, edit +
+approve/reject.
+**Implement:** review_service/endpoints/UI + 10 tests.
+**Verify:** `pytest` → **152 passed** (10 new: queue membership across statuses,
+payload completeness incl. script/scenes/metadata, sim attached, disclosure
+risk, real-person BLOCK, copyright BLOCK, repetition REVIEW, approve/reject/
+edit lifecycle, 404, render attached). Live: queue→detail (3 scenes, 63 words,
+REVIEW) → sim 0.515 → edit → reject (queue stays 1) → approve (queue 0); cameo
+by real person → BLOCK. `npm run build` OK. Dev DB cleaned.
+**Commit:** Sprint 6.1 commit + push to `main`.

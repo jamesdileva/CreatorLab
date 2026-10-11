@@ -1,4 +1,4 @@
-"""Creator CRUD API — Sprint 1.1.
+"""Creator CRUD + prompt-versioned generation API — Sprints 1.1 + 1.2.
 
 DELETE soft-deactivates (sets active=False); records stay viewable.
 All publishes still require explicit human approval (MVP gate, later sprints).
@@ -11,8 +11,11 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..ai.prompts import get_prompt_versions
+from ..ai.providers import ProviderError
 from ..core.database import get_db
 from ..models.creator import Creator
+from ..services.creator_service import generate_creator_response
 
 router = APIRouter(prefix="/api/creators", tags=["creators"])
 
@@ -163,3 +166,60 @@ def deactivate_creator(creator_id: int, db: Session = Depends(get_db)) -> Creato
     db.commit()
     db.refresh(creator)
     return creator
+
+
+class GenerateIn(BaseModel):
+    user_message: str
+    prompt_version: str | None = None
+    provider: str | None = None
+
+
+class GenerateOut(BaseModel):
+    creator_id: int
+    creator_name: str
+    text: str
+    model: str
+    prompt_version: str
+    provider: str
+
+
+@router.post("/{creator_id}/generate", response_model=GenerateOut)
+def generate_creator_voice(
+    creator_id: int, payload: GenerateIn, db: Session = Depends(get_db)
+) -> GenerateOut:
+    creator = _get_or_404(db, creator_id)
+    message = payload.user_message.strip()
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="user_message is required"
+        )
+    try:
+        response, version, provider_name = generate_creator_response(
+            db,
+            creator,
+            message,
+            prompt_version=payload.prompt_version,
+            provider_name=payload.provider,
+        )
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"unknown prompt version: {exc}",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except ProviderError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    return GenerateOut(
+        creator_id=creator.id,
+        creator_name=creator.name,
+        text=response.text,
+        model=response.model,
+        prompt_version=version,
+        provider=provider_name,
+    )
+
+
+@router.get("/prompts/versions", response_model=list[str])
+def list_prompt_versions() -> list[str]:
+    return get_prompt_versions()

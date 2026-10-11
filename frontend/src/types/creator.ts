@@ -17,6 +17,15 @@ export interface Creator {
   updated_at: string;
 }
 
+export interface CreatorVoice {
+  creator_id: number;
+  creator_name: string;
+  text: string;
+  model: string;
+  prompt_version: string;
+  provider: string;
+}
+
 export interface CreatorCreate {
   name: string;
   slug: string;

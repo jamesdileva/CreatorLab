@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getCreator, updateCreator } from "../services/creators";
-import type { Creator } from "../types/creator";
+import {
+  generateCreatorVoice,
+  getCreator,
+  updateCreator,
+} from "../services/creators";
+import type { Creator, CreatorVoice } from "../types/creator";
 
 const csv = (xs: string[]) => xs.join(", ");
 const uncsv = (s: string) =>
@@ -9,7 +13,6 @@ const uncsv = (s: string) =>
     .split(",")
     .map((x) => x.trim())
     .filter(Boolean);
-
 export default function CreatorDetail() {
   const { id } = useParams<{ id: string }>();
   const [creator, setCreator] = useState<Creator | null>(null);
@@ -18,6 +21,12 @@ export default function CreatorDetail() {
   const [personality, setPersonality] = useState("");
   const [humor, setHumor] = useState("");
   const [interests, setInterests] = useState("");
+  const [voiceMessage, setVoiceMessage] = useState(
+    "What do you think about automated tractors?"
+  );
+  const [voice, setVoice] = useState<CreatorVoice | null>(null);
+  const [voiceError, setVoiceError] = useState("");
+  const [voiceBusy, setVoiceBusy] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -57,6 +66,21 @@ export default function CreatorDetail() {
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "toggle failed");
+    }
+  };
+
+  const onTestVoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creator) return;
+    setVoiceBusy(true);
+    setVoiceError("");
+    try {
+      setVoice(await generateCreatorVoice(creator.id, voiceMessage));
+    } catch (err) {
+      setVoice(null);
+      setVoiceError(err instanceof Error ? err.message : "generate failed");
+    } finally {
+      setVoiceBusy(false);
     }
   };
 
@@ -137,6 +161,41 @@ export default function CreatorDetail() {
           {creator.active ? "deactivate" : "reactivate"}
         </button>
       </form>
+
+      <h2>Test voice (Sprint 1.2)</h2>
+      <form onSubmit={(e) => void onTestVoice(e)}>
+        <label>
+          give the creator a prompt
+          <br />
+          <textarea
+            value={voiceMessage}
+            onChange={(e) => setVoiceMessage(e.target.value)}
+            rows={2}
+            style={{ width: "100%" }}
+          />
+        </label>
+        <br />
+        <button type="submit" disabled={voiceBusy}>
+          {voiceBusy ? "generating…" : "generate response"}
+        </button>
+      </form>
+      {voiceError && <p style={{ color: "crimson" }}>{voiceError}</p>}
+      {voice && (
+        <div
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: 8,
+            padding: 12,
+            marginTop: 8,
+          }}
+        >
+          <p style={{ whiteSpace: "pre-wrap" }}>{voice.text}</p>
+          <small>
+            provider: {voice.provider} · model: {voice.model} · prompt:{" "}
+            {voice.prompt_version}
+          </small>
+        </div>
+      )}
     </main>
   );
 }

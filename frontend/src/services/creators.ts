@@ -29,3 +29,24 @@ export const updateCreator = (id: number, patch: CreatorUpdate): Promise<Creator
 
 export const deactivateCreator = (id: number): Promise<Creator> =>
   req<Creator>(`${BASE}/${id}`, { method: "DELETE" });
+
+export interface CreatorVoice {
+  creator_id: number;
+  creator_name: string;
+  text: string;
+  model: string;
+  prompt_version: string;
+  provider: string;
+}
+
+export const generateCreatorVoice = (
+  id: number,
+  user_message: string
+): Promise<CreatorVoice> =>
+  req<CreatorVoice>(`${BASE}/${id}/generate`, {
+    method: "POST",
+    body: JSON.stringify({ user_message }),
+  });
+
+export const listPromptVersions = (): Promise<string[]> =>
+  req<string[]>(`${BASE}/prompts/versions`);

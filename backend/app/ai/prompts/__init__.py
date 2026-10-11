@@ -8,7 +8,10 @@ from pathlib import Path
 from ...models.creator import Creator
 
 PROMPT_DIR = Path(__file__).parent
-PROMPT_VERSIONS: dict[str, str] = {"creator_prompt_v1": "creator_prompt_v1.md"}
+PROMPT_VERSIONS: dict[str, str] = {
+    "creator_prompt_v1": "creator_prompt_v1.md",
+    "episode_prompt_v1": "episode_prompt_v1.md",
+}
 
 
 def _load(template_name: str) -> str:
@@ -22,12 +25,23 @@ def get_prompt_versions() -> list[str]:
     return sorted(PROMPT_VERSIONS)
 
 
+def _render(template: str, values: dict[str, str]) -> str:
+    for key, value in values.items():
+        template = template.replace("{" + key + "}", value)
+    return template
+
+
+def _join(items) -> str:
+    return ", ".join(items or []) or "(none)"
+
+
+def _bullets(items: list[str]) -> str:
+    return "\n".join(f"- {item}" for item in items) if items else "- (none yet)"
+
+
 def render_creator_prompt(creator: Creator, version: str = "creator_prompt_v1") -> str:
     if version not in PROMPT_VERSIONS:
         raise KeyError(f"unknown prompt version: {version}")
-    def _join(items) -> str:
-        return ", ".join(items or []) or "(none)"
-
     values = {
         "name": creator.name,
         "description": creator.description or "(none)",
@@ -40,7 +54,36 @@ def render_creator_prompt(creator: Creator, version: str = "creator_prompt_v1") 
         "constraints": creator.constraints
         or "Fictional character only; all publishes require explicit human approval.",
     }
-    template = _load(PROMPT_VERSIONS[version])
-    for key, value in values.items():
-        template = template.replace("{" + key + "}", value)
-    return template
+    return _render(_load(PROMPT_VERSIONS[version]), values)
+
+
+def render_episode_prompt(
+    creator: Creator,
+    series_name: str,
+    canon: list[str],
+    memories: list[str],
+    previous_episodes: list[str],
+    open_threads: list[str],
+    next_episode_number: int,
+    json_schema: str,
+    variant: int = 0,
+    version: str = "episode_prompt_v1",
+) -> str:
+    if version not in PROMPT_VERSIONS:
+        raise KeyError(f"unknown prompt version: {version}")
+    values = {
+        "creator_name": creator.name,
+        "personality": creator.personality or "(none)",
+        "interests": _join(creator.interests),
+        "humor_style": creator.humor_style or "(none)",
+        "voice_style": creator.voice_style or "(none)",
+        "series_name": series_name,
+        "canon_facts": _bullets(canon),
+        "memories": _bullets(memories),
+        "previous_episodes": _bullets(previous_episodes),
+        "open_threads": _bullets(open_threads),
+        "next_episode_number": str(next_episode_number),
+        "variant": str(variant),
+        "json_schema": json_schema,
+    }
+    return _render(_load(PROMPT_VERSIONS[version]), values)

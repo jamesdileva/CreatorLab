@@ -103,3 +103,23 @@ thread open→resolve linking episode; cross-series link 400; canon CRUD + 400s;
 404s). Live check: created series + 3 episodes + scenes + resolved thread + canon
 via REST. `npm run build` OK (43 modules). Dev DB cleaned.
 **Commit:** Sprint 2.1 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 2.2 — Episode Generator
+
+**Plan:** Canon-aware episode generator (roadmap 2.2, guide Phase 5): retrieve
+canon + memory + episode history + open threads, draft, evaluate, persist.
+**Scope:** `ai/prompts/episode_prompt_v1.md` + registry (+`render_episode_prompt`),
+`ai/structured_output.py` (EpisodeDraft + strict JSON parse), `ai/evaluation.py`
+(PASS/REVIEW/BLOCK: safety blocklist, canon-contradiction via negation-vs-canon
+with echo exclusion, repetition, canon-not-referenced), `services/episode_service.py`,
+`POST /api/series/{id}/generate-episode` (persists Episode+Scenes on PASS/REVIEW,
+422 on BLOCK), stub deterministic 5-archetype JSON drafts, frontend generate panel.
+**Implement:** 4 backend files + endpoint + 13 tests + frontend service/panel.
+**Verify:** `pytest` → **65 passed** (13 new: 5-episode roadmap check — distinct
+premises, zero contradictions/repetition/safety issues; parse/validation tests;
+safety BLOCK; contradiction/repetition/canon-not-referenced REVIEW flags; persistence
++ numbering; prompt/model recorded). Live: 5 generations → Ep1-5 all PASS, history
+ordered, distinct premises. `npm run build` OK. Dev DB cleaned.
+**Commit:** Sprint 2.2 commit + push to `main`.

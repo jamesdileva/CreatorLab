@@ -11,6 +11,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..ai.structured_output import ParseError
 from ..core.database import get_db
 from ..models.canon import Canon, CanonCategory
 from ..models.creator import Creator
@@ -18,6 +19,11 @@ from ..models.episode import Episode, EpisodeStatus
 from ..models.scene import Scene
 from ..models.series import Series, SeriesStatus
 from ..models.story_thread import StoryThread, ThreadStatus
+from ..services.episode_service import (
+    EpisodeBlockedError,
+    GenerationResult,
+    generate_episode,
+)
 
 router = APIRouter(tags=["story-universe"])
 
@@ -521,3 +527,110 @@ def delete_canon(canon_id: int, db: Session = Depends(get_db)) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="canon not found")
     db.delete(canon)
     db.commit()
+
+
+# ---------- Episode generation (Sprint 2.2) ----------
+
+
+class GenerateEpisodeIn(BaseModel):
+    variant: int = 0
+    prompt_version: str | None = None
+    provider: str | None = None
+
+
+class IssueRead(BaseModel):
+    code: str
+    severity: str
+    detail: str
+
+
+class DraftSceneRead(BaseModel):
+    title: str
+    direction: str
+
+
+class DraftRead(BaseModel):
+    premise: str
+    synopsis: str
+    scenes: list[DraftSceneRead]
+    script: str
+
+
+class GenerateEpisodeOut(BaseModel):
+    episode: EpisodeRead
+    draft: DraftRead
+    evaluation_status: str
+    issues: list[IssueRead]
+    prompt_version: str
+    provider: str
+    model: str
+    canon_used: list[str]
+    memories_used: list[str]
+
+
+@router.post("/api/series/{series_id}/generate-episode", response_model=GenerateEpisodeOut)
+def generate_episode_endpoint(
+    series_id: int, payload: GenerateEpisodeIn, db: Session = Depends(get_db)
+) -> GenerateEpisodeOut:
+    series = _series_or_404(db, series_id)
+    if series.status != SeriesStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="series is ended; no new episodes",
+        )
+    creator = db.get(Creator, series.creator_id)
+    if creator is None or not creator.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="creator is missing or inactive",
+        )
+    try:
+        result: GenerationResult = generate_episode(
+            db,
+            series,
+            creator,
+            prompt_version=payload.prompt_version,
+            provider_name=payload.provider,
+            variant=payload.variant,
+        )
+    except EpisodeBlockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": "draft blocked by evaluation; not persisted",
+                "issues": [
+                    {"code": i.code, "severity": i.severity.value, "detail": i.detail}
+                    for i in exc.evaluation.issues
+                ],
+            },
+        )
+    except ParseError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"unknown prompt version: {exc}",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    draft = DraftRead(
+        premise=result.draft.premise,
+        synopsis=result.draft.synopsis,
+        scenes=[DraftSceneRead.model_validate(s.model_dump()) for s in result.draft.scenes],
+        script=result.draft.script,
+    )
+    return GenerateEpisodeOut(
+        episode=EpisodeRead.model_validate(result.episode),
+        draft=draft,
+        evaluation_status=result.evaluation.status,
+        issues=[
+            IssueRead(code=i.code, severity=i.severity.value, detail=i.detail)
+            for i in result.evaluation.issues
+        ],
+        prompt_version=result.prompt_version,
+        provider=result.provider,
+        model=result.model,
+        canon_used=result.canon_used,
+        memories_used=result.memories_used,
+    )

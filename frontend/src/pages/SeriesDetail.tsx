@@ -5,6 +5,7 @@ import {
   createEpisode,
   createThread,
   endSeries,
+  generateEpisode,
   listCanon,
   listEpisodeHistory,
   listThreads,
@@ -12,6 +13,7 @@ import {
 } from "../services/story";
 import { CANON_CATEGORIES } from "../types/story";
 import type { CanonEntry, Episode, StoryThread } from "../types/story";
+import type { GeneratedEpisode } from "../services/story";
 import { getSeries } from "../services/story";
 import type { Series } from "../types/story";
 
@@ -28,6 +30,22 @@ export default function SeriesDetail() {
   const [threadTitle, setThreadTitle] = useState("");
   const [canonCategory, setCanonCategory] = useState("OBJECT");
   const [canonStatement, setCanonStatement] = useState("");
+  const [lastGenerated, setLastGenerated] = useState<GeneratedEpisode | null>(null);
+  const [generating, setGenerating] = useState(false);
+
+  const onGenerateEpisode = async () => {
+    setGenerating(true);
+    try {
+      const result = await generateEpisode(seriesId, episodes.length);
+      setLastGenerated(result);
+      refresh();
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "generation failed");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const refresh = () => {
     listEpisodeHistory(seriesId).then(setEpisodes).catch(() => setEpisodes([]));
@@ -148,6 +166,59 @@ export default function SeriesDetail() {
         />{" "}
         <button type="submit">add episode</button>
       </form>
+
+      <h2>Generate episode (Sprint 2.2)</h2>
+      <p style={{ fontSize: 12, color: "#555" }}>
+        Retrieves series canon + creator memory + episode history, drafts an
+        episode, evaluates it (PASS/REVIEW/BLOCK), and persists it as IDEA.
+      </p>
+      <button
+        disabled={generating || series.status !== "ACTIVE"}
+        onClick={() => void onGenerateEpisode()}
+      >
+        {generating ? "generating…" : "generate next episode"}
+      </button>
+      {lastGenerated && (
+        <div
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: 8,
+            padding: 12,
+            marginTop: 8,
+          }}
+        >
+          <p style={{ whiteSpace: "pre-wrap" }}>
+            <strong>{lastGenerated.evaluation_status}</strong> — Ep{" "}
+            {lastGenerated.episode.episode_number}: {lastGenerated.draft.premise}
+          </p>
+          <p>{lastGenerated.draft.synopsis}</p>
+          <ul>
+            {lastGenerated.draft.scenes.map((s, i) => (
+              <li key={i}>
+                {s.title} — {s.direction}
+              </li>
+            ))}
+          </ul>
+          <small>
+            prompt: {lastGenerated.prompt_version} · model: {lastGenerated.model} ·
+            canon used: {lastGenerated.canon_used.length}
+          </small>
+          {lastGenerated.issues.length > 0 && (
+            <ul>
+              {lastGenerated.issues.map((i, idx) => (
+                <li key={idx} style={{ color: "crimson" }}>
+                  {i.severity}: {i.code} — {i.detail}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p>
+            <Link to={`/episodes/${lastGenerated.episode.id}`}>
+              open episode detail →
+            </Link>
+          </p>
+        </div>
+      )}
 
       <h2>Story threads</h2>
       {threads.length === 0 ? (

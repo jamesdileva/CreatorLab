@@ -118,3 +118,25 @@ export const createCanon = (
 
 export const deleteCanon = (canonId: number): Promise<void> =>
   req<void>(`${ROOT}/api/canon/${canonId}`, { method: "DELETE" });
+
+// episode generation (Sprint 2.2)
+export interface GeneratedEpisode {
+  episode: Episode;
+  draft: { premise: string; synopsis: string; scenes: Scene[]; script: string };
+  evaluation_status: string;
+  issues: { code: string; severity: string; detail: string }[];
+  prompt_version: string;
+  provider: string;
+  model: string;
+  canon_used: string[];
+  memories_used: string[];
+}
+
+export const generateEpisode = (
+  seriesId: number,
+  variant: number
+): Promise<GeneratedEpisode> =>
+  req<GeneratedEpisode>(`${ROOT}/api/series/${seriesId}/generate-episode`, {
+    method: "POST",
+    body: JSON.stringify({ variant }),
+  });

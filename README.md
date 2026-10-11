@@ -19,6 +19,10 @@ pip install -r backend/requirements.txt
 uvicorn app.main:app --reload --app-dir backend
 # GET http://localhost:8000/health -> {"status":"ok"}
 
+# seed Hank + Alex.exe (SQLite proto; Postgres via DATABASE_URL)
+python scripts/seed_creators.py
+# GET http://localhost:8000/api/creators
+
 # frontend (port 5173)
 npm --prefix frontend install
 npm --prefix frontend run dev

@@ -1,9 +1,23 @@
-"""CreatorLab backend — Sprint 0.1 foundation. Serves GET /health."""
+"""CreatorLab backend — Sprint 1.1: health + creator CRUD."""
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-app = FastAPI(title="CreatorLab", version="0.1.0")
+from .api.creators import router as creators_router
+from .core.database import Base, engine
+from .models import creator as _creator_model  # noqa: F401  (register tables)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="CreatorLab", version="0.1.1", lifespan=lifespan)
+app.include_router(creators_router)
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "creatorlab", "version": "0.1.0"}
+    return {"status": "ok", "service": "creatorlab", "version": "0.1.1"}

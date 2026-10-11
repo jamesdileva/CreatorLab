@@ -7,6 +7,8 @@ venv/
 .pytest_cache/
 # Env
 .env
+# Local dev databases (SQLite proto + test artifacts)
+*.db
 # Node
 node_modules/
 dist/

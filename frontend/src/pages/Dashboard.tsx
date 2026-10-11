@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function Dashboard() {
   const [health, setHealth] = useState<string>("checking…");
@@ -12,9 +13,12 @@ export default function Dashboard() {
 
   return (
     <main style={{ fontFamily: "system-ui", padding: 24 }}>
-      <h1>CreatorLab — Dashboard (Sprint 0.1)</h1>
+      <h1>CreatorLab — Dashboard (Sprint 1.1)</h1>
       <p>Backend health: {health}</p>
-      <p>Creators, episodes, simulation, and reality-gap land in later sprints.</p>
+      <nav>
+        <Link to="/creators">Creators</Link>
+      </nav>
+      <p>Episodes, simulation, and reality-gap land in later sprints.</p>
     </main>
   );
 }

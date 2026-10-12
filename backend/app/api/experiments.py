@@ -13,6 +13,7 @@ from ..services.experiment_service import (
     refresh_experiment,
     write_notebook_record,
 )
+from ..services.reality_gap import compute_reality_gap, gap_summary
 
 router = APIRouter(prefix="/api/experiments", tags=["experiments"])
 
@@ -95,3 +96,27 @@ def refresh_experiment_record(
     if experiment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="experiment not found")
     return refresh_experiment(db, experiment)
+
+
+@router.post("/{experiment_id}/reality-gap")
+def compute_experiment_gap(experiment_id: int, db: Session = Depends(get_db)) -> dict:
+    experiment = db.get(ContentExperiment, experiment_id)
+    if experiment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="experiment not found")
+    try:
+        return compute_reality_gap(db, experiment)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
+@router.get("/{experiment_id}/reality-gap")
+def get_experiment_gap(experiment_id: int, db: Session = Depends(get_db)) -> dict:
+    experiment = db.get(ContentExperiment, experiment_id)
+    if experiment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="experiment not found")
+    summary = gap_summary(db, experiment)
+    if summary is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="no reality gap computed yet"
+        )
+    return summary

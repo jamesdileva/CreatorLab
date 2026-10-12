@@ -52,6 +52,16 @@ interface Lifecycle {
   }[];
 }
 
+interface RealityGap {
+  sim_order: number[];
+  real_order: number[];
+  sample_size: number;
+  correlation: { spearman: number | null; kendall_tau: number | null };
+  agreement: { top_1_match: boolean | null; top_k_overlap: number | null; directional_accuracy: number | null };
+  disagreements: { sim_order: string; real_order: string }[];
+  rank_deltas: Record<string, number>;
+}
+
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -131,8 +141,10 @@ export default function Experiments() {
 export function ExperimentDetail() {
   const { id } = useParams<{ id: string }>();
   const [detail, setDetail] = useState<Lifecycle | null>(null);
-  const [error, setError] = useState("");
+  const [gap, setGap] = useState<RealityGap | null>(null);
+  const [gapError, setGapError] = useState("");
   const [conclusions, setConclusions] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -140,9 +152,25 @@ export function ExperimentDetail() {
       .then((d) => {
         setDetail(d);
         setConclusions(d.experiment.conclusions);
+        if (d.experiment.reality_gap) setGap(d.experiment.reality_gap as RealityGap);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "load failed"));
   }, [id]);
+
+  const onComputeGap = async () => {
+    if (!id) return;
+    setGapError("");
+    try {
+      const res = await req<RealityGap>(`${ROOT}/api/experiments/${id}/reality-gap`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      setGap(res);
+      setDetail((d) => (d ? { ...d, experiment: { ...d.experiment, reality_gap: res } } : d));
+    } catch (err) {
+      setGapError(err instanceof Error ? err.message : "reality gap failed");
+    }
+  };
 
   const onSave = async () => {
     if (!id) return;
@@ -218,10 +246,48 @@ export function ExperimentDetail() {
         {step(
           "Reality gap",
           detail.experiment.reality_gap
-            ? JSON.stringify(detail.experiment.reality_gap)
+            ? "computed below"
             : "(Sprint 9.1)"
         )}
       </ol>
+
+      <h2>Reality gap (Sprint 9.1)</h2>
+      {gapError && <p style={{ color: "crimson" }}>{gapError}</p>}
+      <button onClick={() => void onComputeGap()}>compute reality gap</button>
+      {gap && (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            simulated: {gap.sim_order.join(" > ")} · real:{" "}
+            {gap.real_order.join(" > ")}
+          </p>
+          {gap.sample_size >= 2 ? (
+            <p>
+              spearman {gap.correlation.spearman} · kendall τ{" "}
+              {gap.correlation.kendall_tau} · directional{" "}
+              {gap.agreement.directional_accuracy} · top-1{" "}
+              {String(gap.agreement.top_1_match)} (n={gap.sample_size})
+            </p>
+          ) : (
+            <p>needs at least 2 published episodes to correlate (n={gap.sample_size})</p>
+          )}
+          {gap.disagreements.length > 0 ? (
+            <>
+              <p>
+                <strong>{gap.disagreements.length} disagreement(s)</strong>
+              </p>
+              <ul>
+                {gap.disagreements.map((d, i) => (
+                  <li key={i}>
+                    sim {d.sim_order} vs real {d.real_order}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            gap.sample_size >= 2 && <p>simulator and reality agree on all pairs</p>
+          )}
+        </div>
+      )}
       <h2>Conclusions</h2>
       <textarea
         value={conclusions}

@@ -449,3 +449,24 @@ round-trip, list filters, 404s, refresh relinking late video). Live: bound
 experiment (score 0.515, rank 1) with all 8 lifecycle sections + notebook file
 on disk. `npm run build` OK.
 **Commit:** Sprint 8.2 commit + push to `main`.
+
+---
+
+## 2026-10-12 — Sprint 9.1 — Ranking Comparison
+
+**Plan:** Evaluate the simulator against reality (roadmap 9.1, arch §12):
+simulated episode order vs real-views order → disagreement report persisted on
+the experiment.
+**Scope:** `services/reality_gap.py` (sim order from latest watch means, real
+order from latest snapshot views with like tiebreak, comparison via Spearman/
+Kendall/top-k/directional + pairwise disagreements + rank deltas), endpoints
+(POST/GET reality-gap on experiments), experiment-detail compute button + gap
+display; notebook updated via the existing writer.
+**Implement:** service/endpoints/UI + 6 tests.
+**Verify:** `pytest` → **213 passed** (6 new: A>B>C vs B>A>C disagreement
+(spearman 0.5, kendall 0.333, directional 0.667, 1 disagreement,
+rank_deltas A:-1/B:1/C:0), perfect agreement, single-item degradation,
+end-to-end gap persistence, 409 without both sides, 404s). Live: sim
+13>14>15 vs real 14>13>15 → disagreement ('13 > 14' vs '14 > 13'),
+persisted + notebook written. `npm run build` OK.
+**Commit:** Sprint 9.1 commit + push to `main`.

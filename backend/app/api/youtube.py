@@ -14,6 +14,10 @@ from ..services.youtube_upload_service import (
     PublishGateError,
     UploadError,
     publish_episode,
+    refresh_published_status,
+    retry_publish,
+    set_video_thumbnail,
+    update_video_metadata,
 )
 
 router = APIRouter(prefix="/api/youtube", tags=["youtube"])
@@ -52,6 +56,8 @@ class PublishedRead(BaseModel):
     description: str
     privacy_status: str
     status: str
+    youtube_status: str
+    attempts: int
     total_duration: float
     error: str
     upload_time: datetime
@@ -124,6 +130,61 @@ def episode_videos(episode_id: int, db: Session = Depends(get_db)) -> list:
         .order_by(PublishedVideo.id.desc())
         .all()
     )
+
+
+@router.post("/videos/{record_id}/status", response_model=PublishedRead)
+def refresh_video_status(
+    record_id: int, db: Session = Depends(get_db)
+) -> PublishedRead:
+    try:
+        record = refresh_published_status(db, record_id)
+    except PublishGateError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except UploadError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    return PublishedRead.model_validate(record)
+
+
+@router.post("/videos/{record_id}/retry", response_model=PublishedRead)
+def retry_video_upload(record_id: int, db: Session = Depends(get_db)) -> PublishedRead:
+    try:
+        record = retry_publish(db, record_id)
+    except PublishGateError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except UploadError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    return PublishedRead.model_validate(record)
+
+
+class MetadataIn(BaseModel):
+    title: str | None = None
+    description: str | None = None
+
+
+@router.patch("/videos/{record_id}", response_model=PublishedRead)
+def update_video_metadata_endpoint(
+    record_id: int, payload: MetadataIn, db: Session = Depends(get_db)
+) -> PublishedRead:
+    try:
+        record = update_video_metadata(
+            db, record_id, title=payload.title, description=payload.description
+        )
+    except PublishGateError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except UploadError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    return PublishedRead.model_validate(record)
+
+
+@router.post("/videos/{record_id}/thumbnail", response_model=PublishedRead)
+def set_thumbnail(record_id: int, db: Session = Depends(get_db)) -> PublishedRead:
+    try:
+        record = set_video_thumbnail(db, record_id)
+    except PublishGateError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except UploadError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    return PublishedRead.model_validate(record)
 
 
 @router.get("/videos", response_model=list[PublishedRead])

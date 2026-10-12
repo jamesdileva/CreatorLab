@@ -27,6 +27,7 @@ export default function YouTube() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [videos, setVideos] = useState<PublishedVideoRecord[]>([]);
   const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   const refresh = () => {
     req<{ configured: boolean }>(`${ROOT}/api/youtube/status`)
@@ -50,6 +51,23 @@ export default function YouTube() {
       window.location.href = authorize_url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "could not start OAuth");
+    }
+  };
+
+  const act = async (id: number, action: "status" | "retry" | "thumbnail") => {
+    setBusyId(id);
+    try {
+      const res = await fetch(
+        `${ROOT}/api/youtube/videos/${id}/${action}`,
+        { method: "POST" }
+      );
+      if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+      refresh();
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `${action} failed`);
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -110,8 +128,34 @@ export default function YouTube() {
           {videos.map((v) => (
             <li key={v.id}>
               <strong>{v.title || v.video_id}</strong> [{v.privacy_status}] —{" "}
-              {v.status} · ep {v.episode_id} · {(v.total_duration || 0).toFixed(1)}s ·{" "}
-              {v.upload_time}
+              {v.status}
+              {v.youtube_status ? ` (youtube: ${v.youtube_status})` : ""} · ep{" "}
+              {v.episode_id} · {(v.total_duration || 0).toFixed(1)}s · attempts{" "}
+              {v.attempts ?? 0}
+              <div>
+                <button
+                  disabled={busyId === v.id}
+                  onClick={() => void act(v.id, "status")}
+                >
+                  check status
+                </button>{" "}
+                {(v.status === "failed" || v.status === "rejected") && (
+                  <button
+                    disabled={busyId === v.id}
+                    onClick={() => void act(v.id, "retry")}
+                  >
+                    retry upload
+                  </button>
+                )}{" "}
+                {v.status !== "failed" && (
+                  <button
+                    disabled={busyId === v.id}
+                    onClick={() => void act(v.id, "thumbnail")}
+                  >
+                    set thumbnail
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

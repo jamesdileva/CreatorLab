@@ -116,6 +116,8 @@ export interface PublishedVideoRecord {
   title: string;
   privacy_status: string;
   status: string;
+  youtube_status: string;
+  attempts: number;
   total_duration: number;
   error: string;
   upload_time: string;

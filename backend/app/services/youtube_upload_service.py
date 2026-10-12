@@ -18,7 +18,18 @@ from ..models.youtube_account import YouTubeAccount
 from .youtube_service import access_token_for
 
 UPLOAD_SESSION_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
+VIDEOS_API_URL = "https://www.googleapis.com/youtube/v3/videos"
+THUMBNAILS_URL = "https://www.googleapis.com/upload/youtube/v3/thumbnails/set"
 MAX_PUBLIC = False  # MVP gate: private only until the verification path exists
+
+# YouTube uploadStatus -> our record status (roadmap §7.3)
+_UPLOAD_STATUS_MAP = {
+    "uploaded": "uploaded",
+    "processed": "processed",
+    "processed with failures": "processed_with_warnings",
+    "failed": "failed",
+    "rejected": "rejected",
+}
 
 
 class UploadError(OAuthError):
@@ -194,7 +205,233 @@ def publish_episode(
         raise
     record.video_id = resource["id"]
     record.status = "uploaded"
+    record.youtube_status = "uploaded"
     record.upload_time = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+# ---------- Lifecycle (Sprint 7.3) ----------
+
+
+def fetch_video_status(
+    channel_id: str,
+    video_id: str,
+    oauth: GoogleOAuthClient | None = None,
+    http: httpx.Client | None = None,
+) -> dict:
+    """videos.list part=status: uploadStatus, privacy, processing details."""
+    client = _client(oauth)
+    token = access_token_for(channel_id, oauth=client)
+    transport = http or httpx.Client(timeout=30.0)
+    try:
+        res = transport.get(
+            VIDEOS_API_URL,
+            params={"part": "status", "id": video_id},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        res.raise_for_status()
+        items = res.json().get("items", [])
+    except httpx.HTTPError as exc:
+        raise UploadError(f"status lookup failed: {exc}") from exc
+    if not items:
+        raise UploadError(f"video {video_id} not found on channel {channel_id}")
+    item = items[0]
+    status = item.get("status", {})
+    processing = item.get("processingDetails", {})
+    return {
+        "upload_status": status.get("uploadStatus", ""),
+        "privacy_status": status.get("privacyStatus", ""),
+        "processing_status": processing.get("processingStatus", ""),
+        "failure_reason": status.get("failureReason", ""),
+        "rejection_reason": status.get("rejectionReason", ""),
+    }
+
+
+def _record_for(db, record_id: int) -> PublishedVideo:
+    record = db.get(PublishedVideo, record_id)
+    if record is None:
+        raise PublishGateError("published video not found")
+    return record
+
+
+def refresh_published_status(
+    db,
+    record_id: int,
+    oauth: GoogleOAuthClient | None = None,
+    http: httpx.Client | None = None,
+) -> PublishedVideo:
+    """Pull processing/publication state from YouTube into our record."""
+    record = _record_for(db, record_id)
+    if not record.video_id:
+        raise PublishGateError("record has no video_id yet")
+    info = fetch_video_status(
+        record.channel_id, record.video_id, oauth=oauth, http=http
+    )
+    mapped = _UPLOAD_STATUS_MAP.get(info["upload_status"].lower(), info["upload_status"])
+    record.youtube_status = info["upload_status"] or record.youtube_status
+    record.privacy_status = info["privacy_status"] or record.privacy_status
+    if mapped and mapped != "failed":
+        record.status = mapped
+    elif mapped == "failed":
+        record.status = "failed"
+        record.error = info["failure_reason"] or info["rejection_reason"] or "upload failed"
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def retry_publish(
+    db,
+    record_id: int,
+    oauth: GoogleOAuthClient | None = None,
+    http: httpx.Client | None = None,
+) -> PublishedVideo:
+    """Re-attempt the upload for a failed publish (roadmap §7.3 retries)."""
+    record = _record_for(db, record_id)
+    if record.status not in ("failed", "uploading", "rejected"):
+        raise PublishGateError(f"cannot retry a record in status {record.status!r}")
+    render = db.get(Render, record.render_id)
+    if render is None or render.status != "READY":
+        raise PublishGateError("the underlying render is not READY")
+    video_path = Path(render.artifact_dir) / "final.mp4"
+    if not video_path.is_file():
+        raise UploadError(f"render artifact missing: {video_path}")
+
+    record.attempts += 1
+    record.status = "uploading"
+    db.commit()
+    try:
+        resource = upload_private_video(
+            video_path,
+            title=record.title,
+            description=record.description,
+            channel_id=record.channel_id,
+            oauth=oauth,
+            http=http,
+        )
+    except Exception as exc:
+        record.status = "failed"
+        record.error = str(exc)[:400]
+        db.commit()
+        raise
+    record.video_id = resource["id"]
+    record.status = "uploaded"
+    record.youtube_status = "uploaded"
+    record.error = ""
+    record.upload_time = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def update_video_metadata(
+    db,
+    record_id: int,
+    title: str | None = None,
+    description: str | None = None,
+    oauth: GoogleOAuthClient | None = None,
+    http: httpx.Client | None = None,
+) -> PublishedVideo:
+    """videos.update for title/description (privacy stays private in MVP)."""
+    record = _record_for(db, record_id)
+    if not record.video_id:
+        raise PublishGateError("record has no video_id yet")
+    client = _client(oauth)
+    token = access_token_for(record.channel_id, oauth=client)
+    transport = http or httpx.Client(timeout=30.0)
+    payload: dict = {"id": record.video_id}
+    if title is not None:
+        payload.setdefault("snippet", {})["title"] = title
+    if description is not None:
+        payload.setdefault("snippet", {})["description"] = description
+    if "snippet" not in payload:
+        raise PublishGateError("nothing to update")
+    try:
+        res = transport.put(
+            f"{VIDEOS_API_URL}",
+            params={"part": "snippet"},
+            headers={"Authorization": f"Bearer {token}"},
+            json=payload,
+        )
+        res.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise UploadError(f"metadata update failed: {exc}") from exc
+    if title is not None:
+        record.title = title
+    if description is not None:
+        record.description = description
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def extract_thumbnail(video_path: Path, out_path: Path) -> Path:
+    """Grab a representative frame with FFmpeg (offline, deterministic)."""
+    import shutil
+    import subprocess
+
+    if not video_path.is_file():
+        raise UploadError(f"video file not found: {video_path}")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "csv=p=0", str(video_path)],
+        capture_output=True, text=True,
+    )
+    if probe.returncode != 0:
+        raise UploadError("ffprobe failed for thumbnail extraction")
+    try:
+        duration = float(probe.stdout.strip() or 0)
+    except ValueError:
+        duration = 0.0
+    midpoint = max(0.0, duration / 2)
+    out = subprocess.run(
+        ["ffmpeg", "-y", "-ss", f"{midpoint:.2f}", "-i", str(video_path),
+         "-frames:v", "1", str(out_path)],
+        capture_output=True,
+    )
+    if out.returncode != 0 or not out_path.is_file():
+        raise UploadError(f"thumbnail frame extraction failed: {out.stderr[-200:]}")
+    return out_path
+
+
+def set_video_thumbnail(
+    db,
+    record_id: int,
+    thumbnail_path: Path | None = None,
+    oauth: GoogleOAuthClient | None = None,
+    http: httpx.Client | None = None,
+) -> PublishedVideo:
+    """thumbnails.set for a connected video (extracts a frame if none given)."""
+    record = _record_for(db, record_id)
+    if not record.video_id:
+        raise PublishGateError("record has no video_id yet")
+    if thumbnail_path is None:
+        render = db.get(Render, record.render_id) if record.render_id else None
+        if render is None:
+            raise PublishGateError("record has no render to derive a thumbnail from")
+        video = Path(render.artifact_dir) / "final.mp4"
+        thumbnail_path = Path(render.artifact_dir) / "thumbnail.jpg"
+        extract_thumbnail(video, thumbnail_path)
+    if not thumbnail_path.is_file():
+        raise UploadError(f"thumbnail file missing: {thumbnail_path}")
+
+    client = _client(oauth)
+    token = access_token_for(record.channel_id, oauth=client)
+    transport = http or httpx.Client(timeout=60.0)
+    try:
+        res = transport.post(
+            THUMBNAILS_URL,
+            params={"videoId": record.video_id},
+            headers={"Authorization": f"Bearer {token}"},
+            content=thumbnail_path.read_bytes(),
+        )
+        res.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise UploadError(f"thumbnail upload failed: {exc}") from exc
+    record.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(record)
     return record

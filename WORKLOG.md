@@ -370,3 +370,24 @@ gate, duplicate rejection, failure marking, public-privacy rejection,
 session+PUT transport). Live with real web keys: configured=true, consent
 flow intact; full-suite green; `npm run build` OK.
 **Commit:** Sprint 7.2 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 7.3 — Upload Lifecycle
+
+**Plan:** Make publishing reliable: processing status, failures, retries,
+metadata, thumbnails, publication state (roadmap 7.3).
+**Scope:** status refresh (videos.list → mapped record states incl. failed),
+`retry_publish` (re-upload with attempts counter), metadata update
+(videos.update), thumbnails (FFmpeg frame extract + thumbnails.set), model
+fields (youtube_status/attempts/updated_at), endpoints
+(`/videos/{id}/status|retry|thumbnail`, PATCH metadata), `/youtube` lifecycle
+buttons.
+**Implement:** service/model/endpoints/UI + 8 tests.
+**Verify:** `pytest` → **184 passed** (8 new: status mapping processed,
+failure marking with reason, retry recovering after one more failure, retry
+guard for healthy records, metadata update via mock, thumbnail extraction +
+upload, endpoint-level retry, roadmap 3-uploads-1-failure-recovered case
+asserting [uploaded, failed, uploaded] → retry → uploaded attempts=1).
+`npm run build` OK. Dev DB cleaned.
+**Commit:** Sprint 7.3 commit + push to `main`.

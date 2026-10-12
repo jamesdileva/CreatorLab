@@ -106,6 +106,36 @@ export interface RenderRecord {
 export const listEpisodeRenders = (id: number): Promise<RenderRecord[]> =>
   req<RenderRecord[]>(`${ROOT}/api/episodes/${id}/renders`);
 
+// private publish (Sprint 7.2)
+export interface PublishedVideoRecord {
+  id: number;
+  episode_id: number;
+  render_id: number;
+  channel_id: string;
+  video_id: string;
+  title: string;
+  privacy_status: string;
+  status: string;
+  total_duration: number;
+  error: string;
+  upload_time: string;
+}
+
+export const publishEpisode = (
+  id: number,
+  channelId?: string
+): Promise<PublishedVideoRecord> =>
+  req<PublishedVideoRecord>(`${ROOT}/api/youtube/episodes/${id}/publish`, {
+    method: "POST",
+    body: JSON.stringify(channelId ? { channel_id: channelId } : {}),
+  });
+
+export const listPublishedVideos = (): Promise<PublishedVideoRecord[]> =>
+  req<PublishedVideoRecord[]>(`${ROOT}/api/youtube/videos`);
+
+export const listEpisodeVideos = (id: number): Promise<PublishedVideoRecord[]> =>
+  req<PublishedVideoRecord[]>(`${ROOT}/api/youtube/episodes/${id}/videos`);
+
 // scenes
 export const listScenes = (episodeId: number): Promise<Scene[]> =>
   req<Scene[]>(`${ROOT}/api/episodes/${episodeId}/scenes`);

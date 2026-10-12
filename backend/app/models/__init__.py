@@ -5,6 +5,7 @@ from .concept_score import ConceptScore, HumanRanking
 from .creator import Creator
 from .creator_memory import CreatorMemory, MemoryType
 from .episode import Episode, EpisodeStatus
+from .published_video import PublishedVideo
 from .render import AssetKind, Render, RenderStatus
 from .scene import Scene
 from .series import Series, SeriesStatus
@@ -18,15 +19,14 @@ from .simulation import (
 )
 from .story_thread import StoryThread, ThreadStatus
 from .viewer import AUDIENCE_VERSION, SyntheticViewer
+from .youtube_account import YouTubeAccount
 
 __all__ = [
-    "CharacterIdentity",
     "AUDIENCE_VERSION",
     "AssetKind",
-    "RANKING_VERSION",
-    "REACTION_VERSION",
     "Canon",
     "CanonCategory",
+    "CharacterIdentity",
     "Concept",
     "ConceptScore",
     "ConceptSet",
@@ -36,6 +36,9 @@ __all__ = [
     "EpisodeStatus",
     "HumanRanking",
     "MemoryType",
+    "PublishedVideo",
+    "RANKING_VERSION",
+    "REACTION_VERSION",
     "RankingRun",
     "Render",
     "RenderStatus",
@@ -48,4 +51,5 @@ __all__ = [
     "TargetType",
     "ThreadStatus",
     "ViewerReaction",
+    "YouTubeAccount",
 ]

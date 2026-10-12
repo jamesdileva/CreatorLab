@@ -7,8 +7,14 @@ from sqlalchemy.orm import Session
 
 from ..core.database import get_db
 from ..integrations.youtube.auth import GoogleOAuthClient, OAuthError
+from ..models.published_video import PublishedVideo
 from ..models.youtube_account import YouTubeAccount
 from ..services import youtube_service
+from ..services.youtube_upload_service import (
+    PublishGateError,
+    UploadError,
+    publish_episode,
+)
 
 router = APIRouter(prefix="/api/youtube", tags=["youtube"])
 
@@ -28,6 +34,27 @@ class AccountRead(BaseModel):
 
 class StatusOut(BaseModel):
     configured: bool
+
+
+class PublishIn(BaseModel):
+    channel_id: str | None = None
+
+
+class PublishedRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    episode_id: int
+    render_id: int
+    channel_id: str
+    video_id: str
+    title: str
+    description: str
+    privacy_status: str
+    status: str
+    total_duration: float
+    error: str
+    upload_time: datetime
 
 
 @router.get("/status", response_model=StatusOut)
@@ -65,3 +92,40 @@ def oauth_callback(
 @router.get("/accounts", response_model=list[AccountRead])
 def list_accounts(db: Session = Depends(get_db)) -> list[YouTubeAccount]:
     return db.query(YouTubeAccount).order_by(YouTubeAccount.id).all()
+
+
+# ---------- Private upload (Sprint 7.2) ----------
+
+
+@router.post(
+    "/episodes/{episode_id}/publish",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PublishedRead,
+)
+def publish_episode_video(
+    episode_id: int, payload: PublishIn, db: Session = Depends(get_db)
+) -> PublishedRead:
+    try:
+        record = publish_episode(
+            db, episode_id, channel_id=payload.channel_id
+        )
+    except PublishGateError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except UploadError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    return PublishedRead.model_validate(record)
+
+
+@router.get("/episodes/{episode_id}/videos", response_model=list[PublishedRead])
+def episode_videos(episode_id: int, db: Session = Depends(get_db)) -> list:
+    return (
+        db.query(PublishedVideo)
+        .filter(PublishedVideo.episode_id == episode_id)
+        .order_by(PublishedVideo.id.desc())
+        .all()
+    )
+
+
+@router.get("/videos", response_model=list[PublishedRead])
+def list_published(db: Session = Depends(get_db)) -> list:
+    return db.query(PublishedVideo).order_by(PublishedVideo.id.desc()).all()

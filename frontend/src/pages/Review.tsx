@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { publishEpisode } from "../services/story";
 
 const env = import.meta.env as Record<string, string | undefined>;
 const ROOT = env.VITE_API_URL ?? "http://localhost:8000";
@@ -69,6 +70,8 @@ export default function Review() {
   const [error, setError] = useState("");
   const [editScript, setEditScript] = useState("");
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedMsg, setPublishedMsg] = useState("");
 
   const refreshQueue = () =>
     req<QueueItem[]>(`${ROOT}/api/review-queue`)
@@ -120,6 +123,20 @@ export default function Review() {
       setError(err instanceof Error ? err.message : "save failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const onPublish = async () => {
+    if (!selectedId) return;
+    setPublishing(true);
+    try {
+      const res = await publishEpisode(selectedId);
+      setPublishedMsg(`private upload recorded: video ${res.video_id}`);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "publish failed");
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -223,7 +240,11 @@ export default function Review() {
                 {saving ? "saving…" : "save edit"}
               </button>{" "}
               <button onClick={() => void act("approve")}>approve</button>{" "}
-              <button onClick={() => void act("reject")}>reject</button>
+              <button onClick={() => void act("reject")}>reject</button>{" "}
+              <button disabled={publishing} onClick={() => void onPublish()}>
+                {publishing ? "publishing…" : "publish privately"}
+              </button>
+              {publishedMsg && <p style={{ color: "green" }}>{publishedMsg}</p>}
             </>
           )}
         </div>

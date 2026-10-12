@@ -349,3 +349,24 @@ paths). Live with real creds: configured=true; authorize_url well-formed
 (readonly+upload scopes, offline, consent, callback redirect, state);
 accounts empty until manual consent. `npm run build` OK.
 **Commit:** Sprint 7.1 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 7.2 — Private Upload
+
+**Plan:** Upload an approved, rendered Short privately via the official API
+(roadmap 7.2): resumable session + PUT, then record video/channel ids,
+upload_time, and status.
+**Scope:** `models/published_video.py` (episode/render/channel/video ids,
+privacy, status, upload_time), `services/youtube_upload_service.py`
+(resumable-upload flow, MVP gate to private/unlisted only, publish guards:
+READY render + active channel, duplicate-publish rejection, failure recorded
+as failed), endpoints (publish/list per episode/global), review-page publish
+button + `/youtube` published list.
+**Implement:** model/service/endpoints/UI + 8 tests (MockTransport).
+**Verify:** `pytest` → **176 passed** (8 new: publish records video/channel
+ids + privacy + upload_time, endpoint 201 + listings, READY gate, channel
+gate, duplicate rejection, failure marking, public-privacy rejection,
+session+PUT transport). Live with real web keys: configured=true, consent
+flow intact; full-suite green; `npm run build` OK.
+**Commit:** Sprint 7.2 commit + push to `main`.

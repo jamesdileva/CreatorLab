@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { listPublishedVideos } from "../services/story";
+import type { PublishedVideoRecord } from "../services/story";
 
 const env = import.meta.env as Record<string, string | undefined>;
 const ROOT = env.VITE_API_URL ?? "http://localhost:8000";
@@ -23,6 +25,7 @@ export default function YouTube() {
   const [params] = useSearchParams();
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [videos, setVideos] = useState<PublishedVideoRecord[]>([]);
   const [error, setError] = useState("");
 
   const refresh = () => {
@@ -32,6 +35,9 @@ export default function YouTube() {
     req<Account[]>(`${ROOT}/api/youtube/accounts`)
       .then(setAccounts)
       .catch(() => setAccounts([]));
+    listPublishedVideos()
+      .then(setVideos)
+      .catch(() => setVideos([]));
   };
 
   useEffect(refresh, []);
@@ -95,6 +101,21 @@ export default function YouTube() {
         Tokens are stored outside version control (secrets/); the database keeps
         only a reference. Publish stays human-approved (Sprint 7.2+).
       </p>
+
+      <h2>Published videos (Sprint 7.2)</h2>
+      {videos.length === 0 ? (
+        <p>none published yet</p>
+      ) : (
+        <ul>
+          {videos.map((v) => (
+            <li key={v.id}>
+              <strong>{v.title || v.video_id}</strong> [{v.privacy_status}] —{" "}
+              {v.status} · ep {v.episode_id} · {(v.total_duration || 0).toFixed(1)}s ·{" "}
+              {v.upload_time}
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
   );
 }

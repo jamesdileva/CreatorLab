@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.creators import router as creators_router
 from .api.episodes import router as episodes_router
+from .api.experiments import router as experiments_router
 from .api.simulation import router as simulation_router
 from .api.youtube import router as youtube_router
 from .core.database import Base, engine
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="CreatorLab", version="0.1.1", lifespan=lifespan)
 app.include_router(creators_router)
 app.include_router(episodes_router)
+app.include_router(experiments_router)
 app.include_router(simulation_router)
 app.include_router(youtube_router)
 

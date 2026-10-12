@@ -8,6 +8,7 @@ import EpisodeDetail from "./pages/EpisodeDetail";
 import Review from "./pages/Review";
 import YouTube from "./pages/YouTube";
 import Analytics from "./pages/Analytics";
+import Experiments, { ExperimentDetail } from "./pages/Experiments";
 import Audience from "./pages/Audience";
 
 export default function App() {
@@ -22,6 +23,8 @@ export default function App() {
       <Route path="/review" element={<Review />} />
       <Route path="/youtube" element={<YouTube />} />
       <Route path="/analytics" element={<Analytics />} />
+      <Route path="/experiments" element={<Experiments />} />
+      <Route path="/experiments/:id" element={<ExperimentDetail />} />
       <Route path="/simulation" element={<Audience />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

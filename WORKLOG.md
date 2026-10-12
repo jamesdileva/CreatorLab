@@ -430,3 +430,22 @@ offsets, first-offset/first-covered/past-window ladder behavior, append-only +
 deltas, due listing, sweep exclusivity, failure isolation, endpoint + history
 + due). Live: empty-publish due list `[]`, videos `0`. `npm run build` OK.
 **Commit:** Sprint 8.1 commit + push to `main`.
+
+---
+
+## 2026-10-12 — Sprint 8.2 — Experiment Record
+
+**Plan:** One immutable lifecycle record per experiment — simulation + episode
++ render + YouTube video + analytics (roadmap 8.2, arch §9, guide §21).
+**Scope:** `ContentExperiment` model (hypothesis/variant/sim run+score+rank/
+video/real_metrics/reality_gap/conclusions), `experiment_service.py` (bind
+reads latest sim run, relative rank among series episodes' latest aggregates,
+video/metrics links, refresh + notebook writer), `api/experiments.py`
+(create/list/lifecycle/conclusions/refresh), `/experiments` + `/:id` UI.
+**Implement:** model/service/API/UI + 7 tests.
+**Verify:** `pytest` → **207 passed** (7 new: full lifecycle payload with
+score+rank+aggregate, graceful nulls, notebook file content, links+conclusions
+round-trip, list filters, 404s, refresh relinking late video). Live: bound
+experiment (score 0.515, rank 1) with all 8 lifecycle sections + notebook file
+on disk. `npm run build` OK.
+**Commit:** Sprint 8.2 commit + push to `main`.

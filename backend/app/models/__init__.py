@@ -6,6 +6,7 @@ from .concept_score import ConceptScore, HumanRanking
 from .creator import Creator
 from .creator_memory import CreatorMemory, MemoryType
 from .episode import Episode, EpisodeStatus
+from .experiment import ContentExperiment
 from .published_video import PublishedVideo
 from .render import AssetKind, Render, RenderStatus
 from .scene import Scene
@@ -33,6 +34,7 @@ __all__ = [
     "Concept",
     "ConceptScore",
     "ConceptSet",
+    "ContentExperiment",
     "Creator",
     "CreatorMemory",
     "Episode",

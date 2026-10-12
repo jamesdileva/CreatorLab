@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..integrations.youtube.auth import GoogleOAuthClient, OAuthError
 from ..models.published_video import PublishedVideo
+from ..models.video_metrics import VideoMetrics
 from ..models.youtube_account import YouTubeAccount
 from ..services import youtube_service
+from ..services.analytics_service import AnalyticsError, due_videos, snapshot_video
 from ..services.youtube_upload_service import (
     PublishGateError,
     UploadError,
@@ -191,6 +193,57 @@ def set_thumbnail(record_id: int, db: Session = Depends(get_db)) -> PublishedRea
     except UploadError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
     return PublishedRead.model_validate(record)
+
+
+# ---------- Analytics snapshots (Sprint 8.1) ----------
+
+
+class MetricsRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    published_video_id: int
+    video_id: str
+    captured_at: datetime
+    views: int
+    likes: int
+    comments: int
+    subscriber_count: int
+    subscribers_gained: int
+    estimated_minutes_watched: float | None
+    source: str
+
+
+@router.post(
+    "/published/{record_id}/snapshot",
+    status_code=status.HTTP_201_CREATED,
+    response_model=MetricsRead,
+)
+def snapshot_record(record_id: int, db: Session = Depends(get_db)) -> MetricsRead:
+    try:
+        row = snapshot_video(db, record_id)
+    except AnalyticsError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    return MetricsRead.model_validate(row)
+
+
+@router.get("/published/{record_id}/metrics", response_model=list[MetricsRead])
+def published_metrics(record_id: int, db: Session = Depends(get_db)) -> list:
+    if db.get(PublishedVideo, record_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="published video not found"
+        )
+    return (
+        db.query(VideoMetrics)
+        .filter(VideoMetrics.published_video_id == record_id)
+        .order_by(VideoMetrics.id)
+        .all()
+    )
+
+
+@router.get("/analytics/due", response_model=list[int])
+def analytics_due(db: Session = Depends(get_db)) -> list[int]:
+    return due_videos(db)
 
 
 @router.get("/videos", response_model=list[PublishedRead])

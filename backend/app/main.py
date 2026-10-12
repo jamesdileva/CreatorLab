@@ -16,6 +16,9 @@ from .models import creator as _creator_model  # noqa: F401  (register tables)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    from .core.scheduler import start_scheduler
+
+    start_scheduler()
     yield
 
 

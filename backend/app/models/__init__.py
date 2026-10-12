@@ -20,6 +20,7 @@ from .simulation import (
 )
 from .story_thread import StoryThread, ThreadStatus
 from .viewer import AUDIENCE_VERSION, SyntheticViewer
+from .video_metrics import VideoMetrics
 from .youtube_account import YouTubeAccount
 
 __all__ = [
@@ -52,6 +53,7 @@ __all__ = [
     "SyntheticViewer",
     "TargetType",
     "ThreadStatus",
+    "VideoMetrics",
     "ViewerReaction",
     "YouTubeAccount",
 ]

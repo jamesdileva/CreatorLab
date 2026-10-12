@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
 
+    # Scheduler runs the 15-minute analytics sweep (Sprint 8.1, off by default)
+    enable_scheduler: bool = False
+
     # YouTube Data API (official API first; emulators are future-only, arch §5.8)
     youtube_client_id: str = ""
     youtube_client_secret: str = ""

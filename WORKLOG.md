@@ -411,3 +411,22 @@ pre-audit, verification record lifecycle + validation, blocker reporting with
 manual fallback, all-green policy when verified). Full-suite + `npm run build`
 green; `numpy`-free; secrets never printed. `npm run build` OK.
 **Commit:** Sprint 7.4 commit + push to `main`.
+
+---
+
+## 2026-10-12 — Sprint 8.1 — Analytics Collector
+
+**Plan:** Append-only analytics snapshots on the 15m/1h/6h/24h/48h/7d ladder
+(roadmap 8.1, guide §14), with a sweep that snapshots only what's due.
+**Scope:** `VideoMetrics` model (views/likes/comments/sub deltas + raw payloads;
+never overwritten), `analytics_service.py` (videos.list + channels.list stats,
+subscriber deltas vs previous snapshot, sequence-based ladder coverage),
+APScheduler 15-min job (opt-in via `ENABLE_SCHEDULER`) + `collect_metrics.py`
+script, endpoints (snapshot/history/due), `/analytics` UI with timeline +
+deltas.
+**Implement:** model/service/scheduler/endpoints/UI + 12 tests.
+**Verify:** `pytest` → **200 passed** (12 new: stats parsing, exact ladder
+offsets, first-offset/first-covered/past-window ladder behavior, append-only +
+deltas, due listing, sweep exclusivity, failure isolation, endpoint + history
++ due). Live: empty-publish due list `[]`, videos `0`. `npm run build` OK.
+**Commit:** Sprint 8.1 commit + push to `main`.

@@ -391,3 +391,23 @@ upload, endpoint-level retry, roadmap 3-uploads-1-failure-recovered case
 asserting [uploaded, failed, uploaded] → retry → uploaded attempts=1).
 `npm run build` OK. Dev DB cleaned.
 **Commit:** Sprint 7.3 commit + push to `main`.
+
+---
+
+## 2026-10-11 — Sprint 7.4 — Public Publishing Path
+
+**Plan:** Prepare a legitimate public-publishing path (roadmap 7.4): policy +
+verification state in code, audit materials in docs, manual-publishing MVP
+fallback intact.
+**Scope:** `publishing_mode` setting (default private_api), `publish_policy`
+service (blockers computed from mode + audit state + scopes), `AuditStatus`
+model (not_submitted→in_review→approved/denied) + GET/PATCH endpoints,
+publication-policy endpoint, public uploads gated behind approved audit,
+`/youtube` policy panel, docs (`youtube-api-usage.md`, `privacy-policy.md`,
+`youtube-audit-checklist.md`).
+**Implement:** settings/policy/model/endpoints/docs/UI + 4 tests.
+**Verify:** `pytest` → **12 passed in touched suites** (public upload blocked
+pre-audit, verification record lifecycle + validation, blocker reporting with
+manual fallback, all-green policy when verified). Full-suite + `npm run build`
+green; `numpy`-free; secrets never printed. `npm run build` OK.
+**Commit:** Sprint 7.4 commit + push to `main`.

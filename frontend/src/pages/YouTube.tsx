@@ -26,6 +26,13 @@ export default function YouTube() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [videos, setVideos] = useState<PublishedVideoRecord[]>([]);
+  const [policy, setPolicy] = useState<{
+    mode: string;
+    public_automated_uploads_allowed: boolean;
+    blockers: string[];
+    audit: { status: string; notes: string };
+    fallback: string;
+  } | null>(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
 
@@ -39,6 +46,9 @@ export default function YouTube() {
     listPublishedVideos()
       .then(setVideos)
       .catch(() => setVideos([]));
+    req<NonNullable<typeof policy>>(`${ROOT}/api/youtube/publication-policy`)
+      .then(setPolicy)
+      .catch(() => setPolicy(null));
   };
 
   useEffect(refresh, []);
@@ -119,6 +129,27 @@ export default function YouTube() {
         Tokens are stored outside version control (secrets/); the database keeps
         only a reference. Publish stays human-approved (Sprint 7.2+).
       </p>
+
+      <h2>Publication policy (Sprint 7.4)</h2>
+      {policy === null ? (
+        <p>policy unknown</p>
+      ) : (
+        <>
+          <p>
+            mode: <strong>{policy.mode}</strong> · public automated uploads:{" "}
+            {policy.public_automated_uploads_allowed ? "allowed" : "blocked"} ·
+            audit: {policy.audit.status}
+          </p>
+          {policy.blockers.length > 0 && (
+            <ul>
+              {policy.blockers.map((b, i) => (
+                <li key={i}>{b}</li>
+              ))}
+            </ul>
+          )}
+          <p style={{ fontSize: 12 }}>fallback: {policy.fallback}</p>
+        </>
+      )}
 
       <h2>Published videos (Sprint 7.2)</h2>
       {videos.length === 0 ? (

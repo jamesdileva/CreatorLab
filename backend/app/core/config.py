@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     youtube_client_secret: str = ""
     youtube_redirect_uri: str = "http://localhost:8000/api/youtube/oauth/callback"
     youtube_scopes: str = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload"
+    # MVP publishes private/unlisted only; public automated publishing waits for
+    # verification (roadmap 7.4). Values: manual | private_api | public_api
+    publishing_mode: str = "private_api"
 
 
 settings = Settings()

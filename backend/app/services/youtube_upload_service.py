@@ -93,9 +93,12 @@ def upload_private_video(
     http: httpx.Client | None = None,
     privacy: str = "private",
 ) -> dict:
-    """Upload one MP4 as PRIVATE and return the video resource."""
-    if privacy.lower() not in ("private", "unlisted"):
-        raise PublishGateError("MVP uploads are private/unlisted only")
+    """Upload one MP4 with the requested privacy and return the video resource."""
+    privacy = (privacy or "private").lower()
+    if privacy not in ("private", "unlisted", "public"):
+        raise PublishGateError("unknown privacy status")
+    if privacy == "public":
+        raise PublishGateError("public publishing needs audit approval (roadmap 7.4)")
     if not video_path.is_file():
         raise UploadError(f"video file not found: {video_path}")
     if not channel_id:
@@ -123,6 +126,7 @@ def publish_episode(
     episode_id: int,
     video_path: Path | None = None,
     channel_id: str | None = None,
+    privacy: str = "private",
     oauth: GoogleOAuthClient | None = None,
     http: httpx.Client | None = None,
 ) -> PublishedVideo:
@@ -134,6 +138,18 @@ def publish_episode(
         raise PublishGateError(
             "episode must be approved and rendered (READY) before publishing"
         )
+
+    privacy = (privacy or "private").lower()
+    if privacy == "public":
+        from .publish_policy import policy as _publication_policy
+
+        info = _publication_policy(db)
+        if not info["public_automated_uploads_allowed"]:
+            raise PublishGateError(
+                "public publishing blocked: " + "; ".join(info["blockers"])
+            )
+    elif privacy not in ("private", "unlisted"):
+        raise PublishGateError("unknown privacy status")
 
     render = (
         db.query(Render)
@@ -182,7 +198,7 @@ def publish_episode(
         video_id="",
         title=episode.title,
         description=description,
-        privacy_status="private",
+        privacy_status=privacy,
         status="uploading",
         video_size_bytes=video_path.stat().st_size,
         total_duration=render.total_duration,
@@ -197,6 +213,7 @@ def publish_episode(
             channel_id=account.channel_id,
             oauth=oauth,
             http=http,
+            privacy=privacy,
         )
     except Exception as exc:
         record.status = "failed"

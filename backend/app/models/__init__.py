@@ -1,4 +1,5 @@
 from ..services.character_service import CharacterIdentity
+from .audit_status import AuditStatus
 from .canon import Canon, CanonCategory
 from .concept import Concept, ConceptSet
 from .concept_score import ConceptScore, HumanRanking
@@ -24,6 +25,7 @@ from .youtube_account import YouTubeAccount
 __all__ = [
     "AUDIENCE_VERSION",
     "AssetKind",
+    "AuditStatus",
     "Canon",
     "CanonCategory",
     "CharacterIdentity",

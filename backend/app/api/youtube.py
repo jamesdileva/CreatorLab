@@ -42,6 +42,12 @@ class StatusOut(BaseModel):
 
 class PublishIn(BaseModel):
     channel_id: str | None = None
+    privacy: str = "private"
+
+
+class VerificationIn(BaseModel):
+    status: str
+    notes: str = ""
 
 
 class PublishedRead(BaseModel):
@@ -113,7 +119,7 @@ def publish_episode_video(
 ) -> PublishedRead:
     try:
         record = publish_episode(
-            db, episode_id, channel_id=payload.channel_id
+            db, episode_id, channel_id=payload.channel_id, privacy=payload.privacy
         )
     except PublishGateError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
@@ -190,3 +196,45 @@ def set_thumbnail(record_id: int, db: Session = Depends(get_db)) -> PublishedRea
 @router.get("/videos", response_model=list[PublishedRead])
 def list_published(db: Session = Depends(get_db)) -> list:
     return db.query(PublishedVideo).order_by(PublishedVideo.id.desc()).all()
+
+
+# ---------- Publication policy + verification (Sprint 7.4) ----------
+
+
+class AuditRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_name: str
+    status: str
+    scopes_requested: str
+    notes: str
+    updated_at: datetime
+
+
+@router.get("/publication-policy")
+def get_publication_policy(db: Session = Depends(get_db)) -> dict:
+    from ..services.publish_policy import policy
+
+    return policy(db)
+
+
+@router.get("/verification", response_model=AuditRead)
+def get_verification(db: Session = Depends(get_db)) -> AuditRead:
+    from ..services.publish_policy import get_audit_status
+
+    return AuditRead.model_validate(get_audit_status(db))
+
+
+@router.patch("/verification", response_model=AuditRead)
+def update_verification(
+    payload: VerificationIn, db: Session = Depends(get_db)
+) -> AuditRead:
+    from ..services.publish_policy import record_audit_status
+
+    try:
+        return AuditRead.model_validate(
+            record_audit_status(db, payload.status, notes=payload.notes)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

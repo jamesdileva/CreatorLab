@@ -592,3 +592,22 @@ seen episodes, rerun determinism, monotonic strength; simulation + ranking
 suites green). `npm run build` OK (51 modules). Test-generated
 `docs/experiments/EXPERIMENT-*.md` artifacts removed.
 **Commit:** Sprint 11.2 commit + push to `main`.
+
+---
+
+## 2026-10-13 — Sprint 9.3 gap-fill — empirical random baseline
+
+**Plan:** Roadmap 9.3 asks to compare Simulator vs Random selection; the first
+checkpoint (d260c4f) used analytic random expectations. This strengthens it
+with the actual experiment: a seeded random selector that shuffles the
+simulated order and is scored on the same pairwise comparisons.
+**Scope:** `empirical_random_selector` in `research_checkpoint.py` (deterministic
+per seed, seeds RECORDED: RANDOM_SEED=20261012, RANDOM_TRIALS=200), deltas now
+reference the empirical baseline when available, `verdict_text` outcome wording
+in the API, checkpoint UI shows the shuffled-selector baseline + verdict text.
+**Verify:** `pytest` checkpoint suites → **9 passed** (5 new: chance-level ≈0.5
+directional + ≈1/3 top-1 within tolerance, per-seed determinism, empty +
+single-item degradation, 6-experiment checkpoint reporting trials/verdict/
+verdict_text, empty checkpoint stays insufficient with wording). `npm run build`
+OK.
+**Commit:** Sprint 9.3 gap-fill commit + push to `main`.

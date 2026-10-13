@@ -531,3 +531,24 @@ buckets + lesson types + Sample/Confidence strings, distilled lessons reach
 minus slow `test_video_render.py`). `npm run build` OK (51 modules).
 Test-generated `docs/experiments/EXPERIMENT-*.md` artifacts removed.
 **Commit:** Sprint 10.1 commit + push to `main`.
+
+---
+
+## 2026-10-13 — Sprint 10.2 — Creator Strategy
+
+**Plan:** Turn distilled performance summaries into differentiated,
+evidence-backed strategy observations per creator plus shared cross-creator
+patterns (roadmap 10.2).
+**Scope:** `services/creator_strategy.py` (per-creator strong/weak topic +
+structure observations with sample counts/lifts, shared patterns requiring
+≥2 sufficient creators, read-only — writes stay in 10.1),
+`GET /api/creators/strategy` (literal route above `/{creator_id}` to avoid the
+param-shadow class), strategy panel on the creators page. Out of scope:
+memory writes, human judges (17.1).
+**Implement:** strategy service + endpoint + 3 tests + frontend service/panel.
+**Verify:** `pytest` → **229 passed** (3 new: empty→insufficient, differentiated
+Hank-tractor vs Alex-cryptid topics + shared long-structure pattern with
+counts, single-creator gating; full suite minus slow `test_video_render.py`).
+`npm run build` OK (51 modules). Test-generated
+`docs/experiments/EXPERIMENT-*.md` artifacts removed.
+**Commit:** Sprint 10.2 commit + push to `main`.

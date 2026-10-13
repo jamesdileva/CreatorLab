@@ -24,6 +24,7 @@ from ..services.character_service import (
     validate_palette,
 )
 from ..services.creator_service import generate_creator_response
+from ..services.creator_strategy import build_strategy
 from ..services.performance_memory import (
     distill_performance_memories,
     summarize_performance,
@@ -128,6 +129,13 @@ def list_creators(active_only: bool = True, db: Session = Depends(get_db)) -> li
     if active_only:
         q = q.filter(Creator.active.is_(True))
     return q.all()
+
+
+@router.get("/strategy")
+def get_strategy(db: Session = Depends(get_db)) -> dict:
+    """Cross-creator strategy observations (Sprint 10.2). Literal route kept
+    above /{creator_id} so 'strategy' is never read as a creator id."""
+    return build_strategy(db)
 
 
 @router.get("/{creator_id}", response_model=CreatorRead)

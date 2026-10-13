@@ -86,6 +86,29 @@ export const getPerformance = (creatorId: number): Promise<PerformanceSummary> =
 export const distillPerformance = (creatorId: number): Promise<DistillResult> =>
   req<DistillResult>(`${BASE}/${creatorId}/distill-performance`, { method: "POST" });
 
+// creator strategy (Sprint 10.2)
+export interface StrategyObservation {
+  scope: string;
+  creator?: string;
+  creators?: string[];
+  kind: string;
+  tag: string;
+  verdict: string;
+  episodes: number;
+  text: string;
+}
+
+export interface CreatorStrategy {
+  min_episodes: number;
+  sufficient_creators: number;
+  per_creator: Record<string, { creator_id: number; name: string; episodes_with_metrics: number; observations: StrategyObservation[] }>;
+  shared: StrategyObservation[];
+  interpretation_allowed: boolean;
+}
+
+export const getStrategy = (): Promise<CreatorStrategy> =>
+  req<CreatorStrategy>(`${BASE}/strategy`);
+
 // character visual identity (Sprint 5.2)
 export interface CharacterIdentity {
   id: number;

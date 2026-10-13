@@ -595,6 +595,26 @@ suites green). `npm run build` OK (51 modules). Test-generated
 
 ---
 
+## 2026-10-13 — Sprint 11.3 — Audience Segments
+
+**Plan:** Group viewers based on behavior (roadmap 11.3): segments from reaction
+signals + specialization, clusters identified from simulation behavior.
+**Scope:** `services/audience_segments.py` (behavior labels from mean watch/
+follow/engagement + comment share; specialization = top-creator exposure share;
+deterministic k-means over (watch, follow, engagement) with max/min/farthest
+seeding, stable cluster labels from centroids), `GET /api/audience/segments`
+(literal route above `/{viewer_id}`), `/simulation` segments + clusters panel.
+**Implement:** service + endpoint + clustering + 8 tests (4 labels/specialization
+from the in-flight segments work committed here, 4 new clustering) + UI.
+**Verify:** `pytest` → **253 passed** (4 new: determinism under row reordering,
+deep-vs-skimmer separation, empty/tiny degradation, endpoint payload incl.
+25 viewers in 3 labeled clusters + specialization/top_creator). `npm run build`
+OK (51 modules). Test-generated `docs/experiments/EXPERIMENT-*.md` artifacts
+removed before commit.
+**Commit:** Sprint 11.3 commit + push to `main`.
+
+---
+
 ## 2026-10-13 — Sprint 9.3 gap-fill — empirical random baseline
 
 **Plan:** Roadmap 9.3 asks to compare Simulator vs Random selection; the first

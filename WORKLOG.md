@@ -510,3 +510,24 @@ margin edges, empty→insufficient, 5-experiment sufficiency with fixed random
 baselines, min_samples gating). `npm run build` OK (51 modules).
 Test-generated `docs/experiments/EXPERIMENT-*.md` artifacts removed.
 **Commit:** Sprint 9.3 commit + push to `main`.
+
+---
+
+## 2026-10-13 — Sprint 10.1 — Performance Memory
+
+**Plan:** Close the learning loop: derive evidence-backed lessons from real
+performance history into structured memory so generation references actual
+results (roadmap 10.1, guide §16, arch §13).
+**Scope:** `services/performance_memory.py` (per-episode real-views + sim
+coverage, topic/structure buckets with strong ≥1.25x / weak ≤0.75x lifts,
+`AUDIENCE_DISCOVERY` findings + hedged `CONTENT_LESSON` actions, refresh on
+re-distill, 409 below 3 episodes with metrics), `GET` performance summary +
+`POST distill-performance` on creators, creator-detail performance panel +
+distill button. Out of scope: strategy generation (10.2).
+**Implement:** memory service + endpoints + 5 tests + frontend service/panel.
+**Verify:** `pytest` → **226 passed** (5 new: min-episode 409, topic strong/weak
+buckets + lesson types + Sample/Confidence strings, distilled lessons reach
+`memories_used` in generation, refresh without duplicates, 404s; full suite
+minus slow `test_video_render.py`). `npm run build` OK (51 modules).
+Test-generated `docs/experiments/EXPERIMENT-*.md` artifacts removed.
+**Commit:** Sprint 10.1 commit + push to `main`.

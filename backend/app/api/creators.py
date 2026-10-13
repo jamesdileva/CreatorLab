@@ -24,6 +24,10 @@ from ..services.character_service import (
     validate_palette,
 )
 from ..services.creator_service import generate_creator_response
+from ..services.performance_memory import (
+    distill_performance_memories,
+    summarize_performance,
+)
 
 router = APIRouter(prefix="/api/creators", tags=["creators"])
 
@@ -406,3 +410,37 @@ def delete_memory(
     memory = _memory_or_404(db, creator_id, memory_id)
     db.delete(memory)
     db.commit()
+
+
+# ---------- Performance memory (Sprint 10.1) ----------
+
+
+@router.get("/{creator_id}/performance")
+def get_performance(creator_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        return summarize_performance(db, creator_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.post("/{creator_id}/distill-performance", status_code=status.HTTP_201_CREATED)
+def distill_performance(creator_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        memories = distill_performance_memories(db, creator_id)
+    except ValueError as exc:
+        message = str(exc)
+        raise HTTPException(
+            status_code=(
+                status.HTTP_404_NOT_FOUND
+                if "creator not found" in message
+                else status.HTTP_409_CONFLICT
+            ),
+            detail=message,
+        )
+    return {
+        "creator_id": creator_id,
+        "memories_created": len(memories),
+        "memories": [
+            {"id": m.id, "type": m.type.value, "content": m.content} for m in memories
+        ],
+    }

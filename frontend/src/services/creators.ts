@@ -64,6 +64,28 @@ export const createMemory = (
 export const deleteMemory = (creatorId: number, memoryId: number): Promise<void> =>
   req<void>(`${BASE}/${creatorId}/memories/${memoryId}`, { method: "DELETE" });
 
+// performance memory (Sprint 10.1)
+export interface PerformanceSummary {
+  creator_id: number;
+  episodes_with_metrics: number;
+  overall_avg_views: number;
+  sim_coverage: number;
+  topics: Record<string, { episodes: number; avg_views: number; lift_vs_mean: number; verdict: string }>;
+  structures: Record<string, { episodes: number; avg_views: number; lift_vs_mean: number; verdict: string }>;
+}
+
+export interface DistillResult {
+  creator_id: number;
+  memories_created: number;
+  memories: { id: number; type: string; content: string }[];
+}
+
+export const getPerformance = (creatorId: number): Promise<PerformanceSummary> =>
+  req<PerformanceSummary>(`${BASE}/${creatorId}/performance`);
+
+export const distillPerformance = (creatorId: number): Promise<DistillResult> =>
+  req<DistillResult>(`${BASE}/${creatorId}/distill-performance`, { method: "POST" });
+
 // character visual identity (Sprint 5.2)
 export interface CharacterIdentity {
   id: number;

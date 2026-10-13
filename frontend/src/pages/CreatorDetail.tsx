@@ -3,13 +3,16 @@ import { Link, useParams } from "react-router-dom";
 import {
   createMemory,
   deleteMemory,
+  distillPerformance,
   generateCreatorVoice,
   getCreator,
   getIdentity,
+  getPerformance,
   listMemories,
   updateCreator,
   updateIdentity,
 } from "../services/creators";
+import type { PerformanceSummary } from "../services/creators";
 import { MEMORY_TYPES } from "../types/creator";
 import type { CharacterIdentity } from "../services/creators";
 import type { Creator, CreatorMemory, CreatorVoice } from "../types/creator";
@@ -42,6 +45,9 @@ export default function CreatorDetail() {
   const [memContent, setMemContent] = useState("");
   const [memImportance, setMemImportance] = useState("0.5");
   const [identity, setIdentity] = useState<CharacterIdentity | null>(null);
+  const [performance, setPerformance] = useState<PerformanceSummary | null>(null);
+  const [perfError, setPerfError] = useState("");
+  const [perfBusy, setPerfBusy] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -69,6 +75,15 @@ export default function CreatorDetail() {
   useEffect(() => {
     if (!id) return;
     void refreshMemories(Number(id));
+    getPerformance(Number(id))
+      .then((p) => {
+        setPerformance(p);
+        setPerfError("");
+      })
+      .catch(() => {
+        setPerformance(null);
+        setPerfError("");
+      });
   }, [id]);
 
   const onCreateMemory = async (e: React.FormEvent) => {
@@ -86,6 +101,22 @@ export default function CreatorDetail() {
       .catch((err) =>
         setError(err instanceof Error ? err.message : "memory create failed")
       );
+  };
+
+  const onDistill = async () => {
+    if (!creator) return;
+    setPerfBusy(true);
+    setPerfError("");
+    try {
+      await distillPerformance(creator.id);
+      const p = await getPerformance(creator.id);
+      setPerformance(p);
+      await refreshMemories(creator.id);
+    } catch (err) {
+      setPerfError(err instanceof Error ? err.message : "distill failed");
+    } finally {
+      setPerfBusy(false);
+    }
   };
 
   const onDeleteMemory = (memoryId: number) => {
@@ -309,6 +340,37 @@ export default function CreatorDetail() {
         Stored facts are injected into generation (most important first, up to 10)
         so the creator remembers its fictional history.
       </p>
+
+      <h2>Performance memory (Sprint 10.1)</h2>
+      {perfError && <p style={{ color: "crimson" }}>{perfError}</p>}
+      {performance ? (
+        <div>
+          <p>
+            {performance.episodes_with_metrics} episodes with real metrics ·
+            mean {performance.overall_avg_views} views · sim coverage{" "}
+            {performance.sim_coverage}
+          </p>
+          {(["topics", "structures"] as const).map((section) => (
+            <div key={section}>
+              <h3>{section}</h3>
+              <ul>
+                {Object.entries(performance[section]).map(([k, v]) => (
+                  <li key={k}>
+                    {k}: {v.verdict} · {v.avg_views} views (lift {v.lift_vs_mean}) ·
+                    n={v.episodes}
+                  </li>
+                ))}
+                {Object.keys(performance[section]).length === 0 && <li>—</li>}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p>no published episodes with metrics yet (need ≥3 to distill)</p>
+      )}
+      <button onClick={() => void onDistill()} disabled={perfBusy}>
+        {perfBusy ? "distilling…" : "distill performance into memory"}
+      </button>
 
       <h2>Visual identity (Sprint 5.2)</h2>
       {identity === null ? (

@@ -87,22 +87,18 @@ interface Checkpoint {
   generated_at: string;
   min_samples: number;
   experiments_scored: number;
-  simulator: GapBucket;
-  random_baseline: {
-    directional_accuracy: number;
-    spearman: number;
-    kendall_tau: number;
+  simulator: {
+    comparisons: number;
+    directional_accuracy: number | null;
     top_1_hit_rate: number | null;
   };
-  deltas: {
-    directional: number | null;
-    spearman: number | null;
-    kendall_tau: number | null;
-    top_1: number | null;
-  };
-  human_baseline: null;
+  random_baseline: { directional_accuracy: number; top_1_hit_rate: number | null };
+  random_selector?: { trials: number; directional_accuracy: number | null; top_1_hit_rate: number | null };
+  deltas: { directional: number | null; top_1: number | null };
+  human_baseline: unknown;
   human_note: string;
   verdict: string;
+  verdict_text?: string;
   interpretation_allowed: boolean;
 }
 
@@ -170,6 +166,14 @@ export default function Experiments() {
             {checkpoint.simulator.top_1_hit_rate ?? "—"} vs random{" "}
             {checkpoint.random_baseline.top_1_hit_rate ?? "—"}
           </p>
+          {checkpoint.verdict_text && <p>{checkpoint.verdict_text}</p>}
+          {checkpoint.random_selector && checkpoint.random_selector.trials > 0 && (
+            <p>
+              shuffled-selector baseline ({checkpoint.random_selector.trials} seeded
+              trials): directional {checkpoint.random_selector.directional_accuracy} ·
+              top-1 {checkpoint.random_selector.top_1_hit_rate}
+            </p>
+          )}
           {!checkpoint.interpretation_allowed && (
             <p>Not enough comparisons yet (need ≥{checkpoint.min_samples}) — no interpretation.</p>
           )}

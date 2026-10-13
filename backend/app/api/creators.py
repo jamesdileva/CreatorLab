@@ -25,6 +25,7 @@ from ..services.character_service import (
 )
 from ..services.creator_service import generate_creator_response
 from ..services.creator_strategy import build_strategy
+from ..services.creator_familiarity import describe_creator_audience
 from ..services.performance_memory import (
     distill_performance_memories,
     summarize_performance,
@@ -136,6 +137,15 @@ def get_strategy(db: Session = Depends(get_db)) -> dict:
     """Cross-creator strategy observations (Sprint 10.2). Literal route kept
     above /{creator_id} so 'strategy' is never read as a creator id."""
     return build_strategy(db)
+
+
+@router.get("/{creator_id}/familiarity")
+def get_familiarity(creator_id: int, db: Session = Depends(get_db)) -> dict:
+    """Audience familiarity breakdown for one creator (Sprint 11.2)."""
+    try:
+        return describe_creator_audience(db, creator_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.get("/{creator_id}", response_model=CreatorRead)

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from ..core.database import Base
 from .viewer import AUDIENCE_VERSION
 
-REACTION_VERSION = "reaction-v2"
+REACTION_VERSION = "reaction-v3"
 RANKING_VERSION = "ranking-v1"
 
 

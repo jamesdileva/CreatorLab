@@ -572,3 +572,23 @@ fatigue-unit, penalty math; ranking determinism intact; full suite minus slow
 `test_video_render.py`). `npm run build` OK. Test-generated
 `docs/experiments/EXPERIMENT-*.md` artifacts removed.
 **Commit:** Sprint 11.1 commit + push to `main`.
+
+---
+
+## 2026-10-13 — Sprint 11.2 — Creator Familiarity
+
+**Plan:** Same concept, different reactions per viewer depending on how
+familiar they are with the creator (roadmap 11.2).
+**Scope:** `services/creator_familiarity.py` (watch-weighted exposure per
+creator → thresholds 1.2/3.0 → tiers unknown/familiar/favorite + monotonic
+affinity filling the gap when no explicit affinity set; same-target reruns
+excluded), `compute_reaction(familiarity)` + `familiar_creator` reason code,
+`episodes`-only scope, `reaction-v2` → `v3`, `GET /{id}/familiarity`,
+audience-page familiarity panel. Out of scope: segments (11.3).
+**Implement:** familiarity service + engine wiring + endpoint + 5 tests + UI.
+**Verify:** `pytest` → **240 passed** (5 new: tier boundaries, follow
+stranger<familiar<favorite, audience gained familiar+favorite after four
+seen episodes, rerun determinism, monotonic strength; simulation + ranking
+suites green). `npm run build` OK (51 modules). Test-generated
+`docs/experiments/EXPERIMENT-*.md` artifacts removed.
+**Commit:** Sprint 11.2 commit + push to `main`.

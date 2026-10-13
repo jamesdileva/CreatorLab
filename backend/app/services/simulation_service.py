@@ -64,6 +64,7 @@ def compute_reaction(
     hook: str = "",
     tags: list[str] | None = None,
     fatigue: float = 0.0,
+    familiarity: tuple[str, float] | None = None,
 ) -> Reaction:
     text = f"{title}. {premise}"
     interest = baseline_interest(viewer, text, tags)
@@ -77,6 +78,9 @@ def compute_reaction(
 
     affinities = viewer.creator_affinities or {}
     affinity = max((float(v) for v in affinities.values()), default=0.0)
+    # learned familiarity fills the gap when no explicit affinity is set
+    if affinity == 0.0 and familiarity is not None:
+        affinity = familiarity[1]
     follow = _clamp(watch * (0.05 + 0.5 * affinity + 0.2 * interest))
 
     content_words = _words(text) | _words(hook)
@@ -91,7 +95,10 @@ def compute_reaction(
     if hook_score >= 0.7:
         codes.append("strong_hook")
     if affinity >= 0.5:
-        codes.append("creator_affinity")
+        if familiarity is not None and affinity == familiarity[1]:
+            codes.append("familiar_creator")
+        else:
+            codes.append("creator_affinity")
     if (viewer.attention_level or 0.5) >= 0.7:
         codes.append("high_attention")
     if not codes:
@@ -239,6 +246,12 @@ def run_simulation(
         if memoryful
         else set()
     )
+    creator_id: int | None = None
+    if memoryful:
+        from .creator_familiarity import familiarity_for
+
+        episode = db.get(Episode, target_id)
+        creator_id = episode.creator_id if episode is not None else None
 
     run = SimulationRun(
         target_type=target_type,
@@ -257,7 +270,15 @@ def run_simulation(
         fatigue = fatigue_penalty(
             effective_exposures(db, viewer.id, content_words, target_type, target_id)
         )
-        reaction = compute_reaction(viewer, title, premise, hook, tags, fatigue=fatigue)
+        familiarity: tuple[str, float] | None = None
+        if creator_id is not None:
+            tier, affinity, _exposure = familiarity_for(
+                db, viewer.id, creator_id, target_type, target_id
+            )
+            familiarity = (tier, affinity)
+        reaction = compute_reaction(
+            viewer, title, premise, hook, tags, fatigue=fatigue, familiarity=familiarity
+        )
         row = ViewerReaction(
             run_id=run.id,
             viewer_id=viewer.id,

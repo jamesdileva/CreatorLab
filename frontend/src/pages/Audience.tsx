@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import RankingRunner from "../components/RankingRunner";
 import SimulationRunner from "../components/SimulationRunner";
+import { getFamiliarity, listCreators } from "../services/creators";
+import type { CreatorFamiliarity } from "../services/creators";
+import type { Creator } from "../types/creator";
 
 const env = import.meta.env as Record<string, string | undefined>;
 const ROOT = env.VITE_API_URL ?? "http://localhost:8000";
@@ -37,6 +40,7 @@ export default function Audience() {
     "Hank's Old Red tractor breaks down the morning of an important delivery."
   );
   const [interests, setInterests] = useState<Record<number, number>>({});
+  const [familiarity, setFamiliarity] = useState<CreatorFamiliarity | null>(null);
 
   const refresh = () =>
     req<Viewer[]>(`${ROOT}/api/audience`)
@@ -45,6 +49,17 @@ export default function Audience() {
 
   useEffect(() => {
     void refresh();
+  }, []);
+
+  // familiarity for the first creator (Sprint 11.2)
+  useEffect(() => {
+    listCreators()
+      .then((cs: Creator[]) => {
+        if (cs.length > 0) return getFamiliarity(cs[0].id);
+        return null;
+      })
+      .then((f: CreatorFamiliarity | null) => setFamiliarity(f))
+      .catch(() => setFamiliarity(null));
   }, []);
 
   const onSeed = async () => {
@@ -92,6 +107,23 @@ export default function Audience() {
       </p>
       <h1>Synthetic audience (Sprint 4.1)</h1>
       {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {familiarity && (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <h2>Creator familiarity (Sprint 11.2)</h2>
+          <p>
+            {familiarity.creator_slug}: {familiarity.tiers.unknown} unknown ·{" "}
+            {familiarity.tiers.familiar} familiar · {familiarity.tiers.favorite}{" "}
+            favorite (of {familiarity.viewer_count})
+          </p>
+          <ul>
+            {familiarity.viewers.slice(0, 5).map((v) => (
+              <li key={v.viewer_id}>
+                {v.handle}: {v.tier} (exposure {v.exposure.toFixed(2)})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {viewers.length === 0 ? (
         <div>

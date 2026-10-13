@@ -109,6 +109,19 @@ export interface CreatorStrategy {
 export const getStrategy = (): Promise<CreatorStrategy> =>
   req<CreatorStrategy>(`${BASE}/strategy`);
 
+// creator familiarity (Sprint 11.2)
+export interface CreatorFamiliarity {
+  creator_id: number;
+  creator_slug: string;
+  viewer_count: number;
+  tiers: { unknown: number; familiar: number; favorite: number };
+  familiar_or_better: number;
+  viewers: { viewer_id: number; handle: string; exposure: number; tier: string }[];
+}
+
+export const getFamiliarity = (creatorId: number): Promise<CreatorFamiliarity> =>
+  req<CreatorFamiliarity>(`${BASE}/${creatorId}/familiarity`);
+
 // character visual identity (Sprint 5.2)
 export interface CharacterIdentity {
   id: number;

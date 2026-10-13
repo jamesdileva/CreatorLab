@@ -9,7 +9,35 @@ import type { Creator } from "../types/creator";
 const env = import.meta.env as Record<string, string | undefined>;
 const ROOT = env.VITE_API_URL ?? "http://localhost:8000";
 
-export interface Viewer {
+export interface ViewerSignal {
+  viewer_id: number;
+  handle: string;
+  runs: number;
+  watch: number;
+  follow: number;
+  engagement: number;
+  comment_share: number;
+  specialization: number;
+  top_creator: string | null;
+  cluster: number;
+}
+
+interface SegmentsPayload {
+  viewer_count: number;
+  classified: number;
+  segments: Record<string, ViewerSignal[]>;
+  counts: Record<string, number>;
+  clusters: {
+    k: number;
+    labels: string[];
+    centroids: { watch: number; follow: number; engagement: number }[];
+    members: Record<string, ViewerSignal[]>;
+    counts: Record<string, number>;
+  };
+  interpretation_allowed: boolean;
+}
+
+interface Viewer {
   id: number;
   handle: string;
   age_bracket: string;
@@ -41,14 +69,21 @@ export default function Audience() {
   );
   const [interests, setInterests] = useState<Record<number, number>>({});
   const [familiarity, setFamiliarity] = useState<CreatorFamiliarity | null>(null);
+  const [segments, setSegments] = useState<SegmentsPayload | null>(null);
 
   const refresh = () =>
     req<Viewer[]>(`${ROOT}/api/audience`)
       .then(setViewers)
       .catch((e) => setError(e instanceof Error ? e.message : "load failed"));
 
+  const refreshSegments = () =>
+    req<SegmentsPayload>(`${ROOT}/api/audience/segments`)
+      .then(setSegments)
+      .catch(() => setSegments(null));
+
   useEffect(() => {
     void refresh();
+    refreshSegments();
   }, []);
 
   // familiarity for the first creator (Sprint 11.2)
@@ -119,6 +154,36 @@ export default function Audience() {
             {familiarity.viewers.slice(0, 5).map((v) => (
               <li key={v.viewer_id}>
                 {v.handle}: {v.tier} (exposure {v.exposure.toFixed(2)})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {segments && segments.classified > 0 && (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <h2>Audience segments (Sprint 11.3)</h2>
+          <p>
+            {segments.classified} viewers classified into {segments.clusters.k}{" "}
+            behavior clusters
+          </p>
+          <h3>Clusters (centroids)</h3>
+          <ul>
+            {segments.clusters.labels.map((label, i) => (
+              <li key={label}>
+                <strong>{label}</strong>: {segments.clusters.counts[label] ?? 0} viewers ·
+                watch {segments.clusters.centroids[i].watch} · follow{" "}
+                {segments.clusters.centroids[i].follow} · engagement{" "}
+                {segments.clusters.centroids[i].engagement}
+              </li>
+            ))}
+          </ul>
+          <h3>Segments</h3>
+          <ul>
+            {Object.entries(segments.segments).map(([label, members]) => (
+              <li key={label}>
+                {label}: {members.length} (top creator{" "}
+                {members[0]?.top_creator ?? "—"})
               </li>
             ))}
           </ul>

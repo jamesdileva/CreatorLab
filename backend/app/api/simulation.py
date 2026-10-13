@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..models.simulation import RankingRun, SimulationRun, ViewerReaction
 from ..models.viewer import AUDIENCE_VERSION, SyntheticViewer
+from ..services.audience_segments import build_segments
 from ..services.audience_service import _DEFAULT_COUNT, baseline_interest, seed_audience
 from ..services.simulation_service import (
     RANK_METRICS,
@@ -73,6 +74,13 @@ def list_viewers(db: Session = Depends(get_db)) -> list[SyntheticViewer]:
         .order_by(SyntheticViewer.seed_index)
         .all()
     )
+
+
+@router.get("/audience/segments")
+def audience_segments(db: Session = Depends(get_db)) -> dict:
+    """Behavior-derived audience segments (Sprint 11.3). Literal route sits
+    above /audience/{viewer_id} so 'segments' is never read as a viewer id."""
+    return build_segments(db)
 
 
 @router.get("/audience/{viewer_id}", response_model=ViewerRead)

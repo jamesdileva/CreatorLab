@@ -62,6 +62,27 @@ interface RealityGap {
   rank_deltas: Record<string, number>;
 }
 
+interface GapBucket {
+  comparisons: number;
+  directional_accuracy: number | null;
+  spearman: number | null;
+  kendall_tau: number | null;
+  top_1_hit_rate: number | null;
+  disagreements: number;
+  sample_sufficient: boolean;
+}
+
+interface GapDashboard {
+  generated_at: string;
+  min_samples: number;
+  experiments_scored: number;
+  overall: GapBucket;
+  per_creator: Record<string, GapBucket>;
+  per_topic: Record<string, GapBucket>;
+  per_format: Record<string, GapBucket>;
+  interpretation_allowed: boolean;
+}
+
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -76,11 +97,15 @@ export default function Experiments() {
   const [episodeId, setEpisodeId] = useState("");
   const [hypothesis, setHypothesis] = useState("");
   const [error, setError] = useState("");
+  const [dashboard, setDashboard] = useState<GapDashboard | null>(null);
 
   useEffect(() => {
     req<ExperimentRow[]>(`${ROOT}/api/experiments`)
       .then(setRows)
       .catch(() => setRows([]));
+    req<GapDashboard>(`${ROOT}/api/experiments/reality-gap/dashboard`)
+      .then(setDashboard)
+      .catch(() => setDashboard(null));
   }, []);
 
   const onCreate = async (e: React.FormEvent) => {
@@ -106,6 +131,41 @@ export default function Experiments() {
       </p>
       <h1>Experiments (Sprint 8.2)</h1>
       {error && <p style={{ color: "crimson" }}>{error}</p>}
+      <h2>Reality-gap dashboard (Sprint 9.2)</h2>
+      {dashboard ? (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            {dashboard.experiments_scored} scored · overall directional{" "}
+            {dashboard.overall.directional_accuracy ?? "—"} · top-1{" "}
+            {dashboard.overall.top_1_hit_rate ?? "—"} · spearman{" "}
+            {dashboard.overall.spearman ?? "—"} · disagreements{" "}
+            {dashboard.overall.disagreements} (n=
+            {dashboard.overall.comparisons}
+            {dashboard.overall.sample_sufficient ? ", sufficient" : ", need ≥" + dashboard.min_samples})
+          </p>
+          {!dashboard.interpretation_allowed && (
+            <p>Not enough experiments yet — numbers carry sample counts, no interpretation.</p>
+          )}
+          {(["per_creator", "per_topic", "per_format"] as const).map((section) => (
+            <div key={section}>
+              <h3>{section}</h3>
+              <ul>
+                {Object.entries(dashboard[section]).map(([k, v]) => (
+                  <li key={k}>
+                    {k}: dir {v.directional_accuracy ?? "—"} · top-1{" "}
+                    {v.top_1_hit_rate ?? "—"} · n={v.comparisons}
+                    {v.sample_sufficient ? "" : " (insufficient)"} · misses{" "}
+                    {v.disagreements}
+                  </li>
+                ))}
+                {Object.keys(dashboard[section]).length === 0 && <li>—</li>}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p>dashboard unavailable</p>
+      )}
       <ul>
         {rows.map((r) => (
           <li key={r.id}>

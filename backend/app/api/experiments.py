@@ -14,6 +14,7 @@ from ..services.experiment_service import (
     write_notebook_record,
 )
 from ..services.reality_gap import compute_reality_gap, gap_summary
+from ..services.reality_gap_dashboard import build_dashboard
 
 router = APIRouter(prefix="/api/experiments", tags=["experiments"])
 
@@ -120,3 +121,11 @@ def get_experiment_gap(experiment_id: int, db: Session = Depends(get_db)) -> dic
             status_code=status.HTTP_404_NOT_FOUND, detail="no reality gap computed yet"
         )
     return summary
+
+
+# ---------- Reality gap dashboard (Sprint 9.2) ----------
+
+
+@router.get("/reality-gap/dashboard")
+def reality_gap_dashboard(min_samples: int = 5, db: Session = Depends(get_db)) -> dict:
+    return build_dashboard(db, min_samples=min_samples)

@@ -470,3 +470,23 @@ end-to-end gap persistence, 409 without both sides, 404s). Live: sim
 13>14>15 vs real 14>13>15 → disagreement ('13 > 14' vs '14 > 13'),
 persisted + notebook written. `npm run build` OK.
 **Commit:** Sprint 9.1 commit + push to `main`.
+
+---
+
+## 2026-10-13 — Sprint 9.2 — Reality Gap Dashboard
+
+**Plan:** Aggregate per-experiment reality gaps into an overall + per-creator /
+per-topic / per-format accuracy view with sample-size gating (roadmap 9.2).
+**Scope:** `services/reality_gap_dashboard.py` (overall + buckets, directional /
+Spearman / Kendall / top-1 / disagreements + `sample_sufficient` at
+`min_samples=5`), `GET /api/experiments/reality-gap/dashboard`, experiments-page
+dashboard panel. Out of scope: research checkpoint analysis (9.3).
+**Implement:** dashboard service + endpoint + 4 tests + frontend panel (overall
+numbers, insufficiency notice, per-bucket misses/counts).
+**Verify:** `pytest backend/tests/test_reality_gap_dashboard.py
+backend/tests/test_reality_gap.py backend/tests/test_experiments.py` → **17 passed**
+(4 new: empty, 5-comparison aggregation + sufficiency, min_samples gating,
+disagreement counting); broader suite 217 passed (slow `test_video_render.py`
+excluded); `npm run build` OK (51 modules). Test-generated
+`docs/experiments/EXPERIMENT-*.md` artifacts removed before commit.
+**Commit:** Sprint 9.2 commit + push to `main`.

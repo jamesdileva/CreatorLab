@@ -83,6 +83,29 @@ interface GapDashboard {
   interpretation_allowed: boolean;
 }
 
+interface Checkpoint {
+  generated_at: string;
+  min_samples: number;
+  experiments_scored: number;
+  simulator: GapBucket;
+  random_baseline: {
+    directional_accuracy: number;
+    spearman: number;
+    kendall_tau: number;
+    top_1_hit_rate: number | null;
+  };
+  deltas: {
+    directional: number | null;
+    spearman: number | null;
+    kendall_tau: number | null;
+    top_1: number | null;
+  };
+  human_baseline: null;
+  human_note: string;
+  verdict: string;
+  interpretation_allowed: boolean;
+}
+
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -98,6 +121,7 @@ export default function Experiments() {
   const [hypothesis, setHypothesis] = useState("");
   const [error, setError] = useState("");
   const [dashboard, setDashboard] = useState<GapDashboard | null>(null);
+  const [checkpoint, setCheckpoint] = useState<Checkpoint | null>(null);
 
   useEffect(() => {
     req<ExperimentRow[]>(`${ROOT}/api/experiments`)
@@ -106,6 +130,9 @@ export default function Experiments() {
     req<GapDashboard>(`${ROOT}/api/experiments/reality-gap/dashboard`)
       .then(setDashboard)
       .catch(() => setDashboard(null));
+    req<Checkpoint>(`${ROOT}/api/experiments/research-checkpoint`)
+      .then(setCheckpoint)
+      .catch(() => setCheckpoint(null));
   }, []);
 
   const onCreate = async (e: React.FormEvent) => {
@@ -131,6 +158,26 @@ export default function Experiments() {
       </p>
       <h1>Experiments (Sprint 8.2)</h1>
       {error && <p style={{ color: "crimson" }}>{error}</p>}
+      <h2>First research checkpoint (Sprint 9.3)</h2>
+      {checkpoint ? (
+        <div style={{ border: "1px solid #999", borderRadius: 8, padding: 12 }}>
+          <p>
+            <strong>verdict: {checkpoint.verdict}</strong> ·{" "}
+            {checkpoint.experiments_scored} scored · sim directional{" "}
+            {checkpoint.simulator.directional_accuracy ?? "—"} vs random{" "}
+            {checkpoint.random_baseline.directional_accuracy} (Δ{" "}
+            {checkpoint.deltas.directional ?? "—"}) · top-1{" "}
+            {checkpoint.simulator.top_1_hit_rate ?? "—"} vs random{" "}
+            {checkpoint.random_baseline.top_1_hit_rate ?? "—"}
+          </p>
+          {!checkpoint.interpretation_allowed && (
+            <p>Not enough comparisons yet (need ≥{checkpoint.min_samples}) — no interpretation.</p>
+          )}
+          <p>human baseline: {checkpoint.human_note}</p>
+        </div>
+      ) : (
+        <p>checkpoint unavailable</p>
+      )}
       <h2>Reality-gap dashboard (Sprint 9.2)</h2>
       {dashboard ? (
         <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>

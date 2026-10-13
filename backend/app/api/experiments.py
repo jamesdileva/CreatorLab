@@ -15,6 +15,7 @@ from ..services.experiment_service import (
 )
 from ..services.reality_gap import compute_reality_gap, gap_summary
 from ..services.reality_gap_dashboard import build_dashboard
+from ..services.research_checkpoint import build_checkpoint
 
 router = APIRouter(prefix="/api/experiments", tags=["experiments"])
 
@@ -65,6 +66,19 @@ def list_experiments(
     if creator_id is not None:
         q = q.filter(ContentExperiment.creator_id == creator_id)
     return q.order_by(ContentExperiment.id.desc()).all()
+
+
+@router.get("/reality-gap/dashboard")
+def reality_gap_dashboard(min_samples: int = 5, db: Session = Depends(get_db)) -> dict:
+    return build_dashboard(db, min_samples=min_samples)
+
+
+# ---------- First research checkpoint (Sprint 9.3) ----------
+
+
+@router.get("/research-checkpoint")
+def research_checkpoint(min_samples: int = 5, db: Session = Depends(get_db)) -> dict:
+    return build_checkpoint(db, min_samples=min_samples)
 
 
 @router.get("/{experiment_id}")
@@ -121,11 +135,3 @@ def get_experiment_gap(experiment_id: int, db: Session = Depends(get_db)) -> dic
             status_code=status.HTTP_404_NOT_FOUND, detail="no reality gap computed yet"
         )
     return summary
-
-
-# ---------- Reality gap dashboard (Sprint 9.2) ----------
-
-
-@router.get("/reality-gap/dashboard")
-def reality_gap_dashboard(min_samples: int = 5, db: Session = Depends(get_db)) -> dict:
-    return build_dashboard(db, min_samples=min_samples)

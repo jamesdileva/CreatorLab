@@ -490,3 +490,23 @@ disagreement counting); broader suite 217 passed (slow `test_video_render.py`
 excluded); `npm run build` OK (51 modules). Test-generated
 `docs/experiments/EXPERIMENT-*.md` artifacts removed before commit.
 **Commit:** Sprint 9.2 commit + push to `main`.
+
+---
+
+## 2026-10-13 — Sprint 9.3 — First Research Checkpoint
+
+**Plan:** Answer the roadmap question (simulator vs random) with an explicit,
+gated verdict instead of ad-hoc notebook inspection.
+**Scope:** `services/research_checkpoint.py` (random baselines: directional 0.5,
+correlations 0.0, top-1 mean(1/n); verdict A/beats, B/similar, C/worse with
+±0.15 margin; human baseline reported unavailable — deferred to Sprint 17.1),
+`GET /api/experiments/research-checkpoint`, checkpoint panel on the experiments
+page. Out of scope: human judges (17.1), calibration/forecasting (Phase 15).
+Also moved literal `reality-gap/dashboard` + `research-checkpoint` routes above
+`/{experiment_id}` (same shadowing class fixed in Sprint 4.3).
+**Implement:** checkpoint service + endpoint + 4 tests + frontend panel.
+**Verify:** `pytest` touched suites → **21 passed** (4 new: boundary mapping incl.
+margin edges, empty→insufficient, 5-experiment sufficiency with fixed random
+baselines, min_samples gating). `npm run build` OK (51 modules).
+Test-generated `docs/experiments/EXPERIMENT-*.md` artifacts removed.
+**Commit:** Sprint 9.3 commit + push to `main`.

@@ -63,12 +63,13 @@ def compute_reaction(
     premise: str,
     hook: str = "",
     tags: list[str] | None = None,
+    fatigue: float = 0.0,
 ) -> Reaction:
     text = f"{title}. {premise}"
     interest = baseline_interest(viewer, text, tags)
     hook_score = hook_strength(hook, viewer.attention_level or 0.5)
 
-    watch = _clamp(0.25 + 0.45 * hook_score + 0.30 * interest)
+    watch = _clamp(0.25 + 0.45 * hook_score + 0.30 * interest - fatigue)
     style = viewer.response_style or "lurker"
     like = _clamp(watch * _LIKE_RATE.get(style, 0.25))
     comment = _clamp(watch * _COMMENT_RATE.get(style, 0.05))
@@ -95,6 +96,8 @@ def compute_reaction(
         codes.append("high_attention")
     if not codes:
         codes.append("baseline_curiosity")
+    if fatigue > 0:
+        codes.append("repetition_fatigue")
 
     return Reaction(
         watch=round(watch, 3),
@@ -226,8 +229,16 @@ def aggregate_reactions(reactions: list[ViewerReaction]) -> dict:
 def run_simulation(
     db: Session, target_type: str, target_id: int, seed: int = 0
 ) -> RunResult:
+    from .viewer_memory import effective_exposures, fatigue_penalty
+
     title, premise, hook, tags = _resolve_content(db, target_type, target_id)
     viewers = seed_audience(db)
+    memoryful = target_type == TargetType.EPISODE.value
+    content_words = (
+        _words(f"{title}. {premise}") | _words(hook) | _words(" ".join(tags))
+        if memoryful
+        else set()
+    )
 
     run = SimulationRun(
         target_type=target_type,
@@ -243,7 +254,10 @@ def run_simulation(
 
     reactions: list[ViewerReaction] = []
     for viewer in viewers:
-        reaction = compute_reaction(viewer, title, premise, hook, tags)
+        fatigue = fatigue_penalty(
+            effective_exposures(db, viewer.id, content_words, target_type, target_id)
+        )
+        reaction = compute_reaction(viewer, title, premise, hook, tags, fatigue=fatigue)
         row = ViewerReaction(
             run_id=run.id,
             viewer_id=viewer.id,

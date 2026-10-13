@@ -552,3 +552,23 @@ counts, single-creator gating; full suite minus slow `test_video_render.py`).
 `npm run build` OK (51 modules). Test-generated
 `docs/experiments/EXPERIMENT-*.md` artifacts removed.
 **Commit:** Sprint 10.2 commit + push to `main`.
+
+---
+
+## 2026-10-13 — Sprint 11.1 — Viewer Memory
+
+**Plan:** Give viewers repetition fatigue: watch-weighted recall of content
+words across past runs dulls near-identical follow-ups (roadmap 11.1).
+**Scope:** `services/viewer_memory.py` (effective exposures + capped penalty,
+same-target reruns excluded so identical reruns stay bit-identical, episode
+runs only — concept evaluations stay memory-free so candidate ranking keeps
+a clean read), `compute_reaction(fatigue)` + `repetition_fatigue` reason code,
+reaction model bumped `reaction-v1` → `reaction-v2`. Out of scope: familiarity
+(11.2), segments (11.3).
+**Implement:** memory service + engine wiring + 6 tests (1 version-bump fix).
+**Verify:** `pytest` → **235 passed** (6 new: five-tractor dulls sixth by >0.05
+with fatigue codes, rerun determinism, unrelated immunity, concept immunity,
+fatigue-unit, penalty math; ranking determinism intact; full suite minus slow
+`test_video_render.py`). `npm run build` OK. Test-generated
+`docs/experiments/EXPERIMENT-*.md` artifacts removed.
+**Commit:** Sprint 11.1 commit + push to `main`.

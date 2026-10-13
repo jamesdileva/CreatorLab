@@ -85,7 +85,7 @@ def test_run_concept_returns_aggregate(client):
     assert body["run"]["viewer_count"] == 25
     assert body["run"]["audience_version"] == "audience-v1"
     assert body["run"]["model"] == "stub/deterministic-v1"
-    assert body["run"]["prompt_version"] == "reaction-v1"
+    assert body["run"]["prompt_version"] == "reaction-v2"
     agg = body["aggregate"]
     for key in (
         "watch_probability",

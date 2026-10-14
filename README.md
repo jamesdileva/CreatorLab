@@ -37,6 +37,7 @@ Copy `.env.example` to `.env` and fill in values. Never commit `.env`.
 ## MVP scope
 
 - 2 fictional creators: Hank, Alex.exe (see `docs/creator-specs/`)
+- Phase 12 expansion: Willow (12.1), Crash (12.2), Jessica (12.3)
 - Versioned creator prompts (`creator_prompt_v1`, frozen) + `LLMProvider` abstraction
 - Structured creator memory (canon/events/jokes) injected into generation
 - YouTube Shorts, original episodic content

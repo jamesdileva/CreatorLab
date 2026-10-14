@@ -49,6 +49,21 @@ DEFAULT_IDENTITIES: dict[str, dict] = {
         "props": ["gear"],
         "style": "rugged, weathered, workwear",
     },
+    "willow": {
+        "display_name": "Willow",
+        "palette": {
+            "bg_top": "#1e3320",
+            "bg_bottom": "#0c140d",
+            "skin": "#b98a5e",
+            "shirt": "#3f6b3a",
+            "hair": "#3a2a1a",
+            "accent": "#e0784a",
+            "text": "#eef3e2",
+        },
+        "accessories": ["flower"],
+        "props": ["mug"],
+        "style": "earthy, handmade, garden-worn",
+    },
     "alex-exe": {
         "display_name": "Alex.exe",
         "palette": {
@@ -187,6 +202,17 @@ def _draw_headset(draw, palette, cx, cy, scale):
     _rounded(draw, [cx + int(178 * scale), cy + int(30 * scale), cx + int(206 * scale), cy + int(60 * scale)], 12, accent)
 
 
+def _draw_flower(draw, palette, cx, cy, scale):
+    """Flower crown arc across the hairline."""
+    accent = _hex_rgb(palette["accent"])
+    text = _hex_rgb(palette["text"])
+    for i, dx in enumerate(range(-150, 170, 50)):
+        x = cx + int(dx * scale)
+        y = cy + int((abs(dx) // 50) * 12 * scale)
+        r = int(26 * scale)
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=accent if i % 2 == 0 else text)
+
+
 def _draw_prop_gear(draw, palette, x, y, r):
     accent = _hex_rgb(palette["accent"])
     draw.ellipse([x - r, y - r, x + r, y + r], outline=accent, width=int(r * 0.28))
@@ -196,6 +222,12 @@ def _draw_prop_terminal(draw, palette, x, y, w, h):
     accent = _hex_rgb(palette["accent"])
     _rounded(draw, [x, y, x + w, y + h], 18, accent)
     draw.rectangle([x + int(w * 0.12), y + int(h * 0.2), x + int(w * 0.55), y + int(h * 0.3)], fill=(10, 12, 20))
+
+
+def _draw_prop_mug(draw, palette, x, y, w, h):
+    accent = _hex_rgb(palette["accent"])
+    _rounded(draw, [x, y, x + w, y + h], 16, accent)
+    draw.arc([x + w - 10, y + int(h * 0.2), x + w + 50, y + int(h * 0.75)], 270, 90, fill=accent, width=12)
 
 
 def render_portrait(identity: CharacterIdentity, path: Path) -> Path:
@@ -228,12 +260,16 @@ def render_portrait(identity: CharacterIdentity, path: Path) -> Path:
         _draw_visor(draw, palette, cx, head_cy - 20, 1.0)
     if "headset" in accessories:
         _draw_headset(draw, palette, cx, head_cy - r, 1.0)
+    if "flower" in accessories:
+        _draw_flower(draw, palette, cx, head_cy - int(r * 0.8), 1.0)
 
     props = set(identity.props or [])
     if "gear" in props:
         _draw_prop_gear(draw, palette, 240, 1560, 110)
     if "terminal" in props:
         _draw_prop_terminal(draw, palette, 700, 1500, 200, 130)
+    if "mug" in props:
+        _draw_prop_mug(draw, palette, 700, 1500, 170, 120)
 
     img.save(path)
     return path

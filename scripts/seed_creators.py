@@ -1,4 +1,4 @@
-"""Seed Hank + Alex.exe into the DB (direct insert, idempotent by slug).
+"""Seed Hank + Alex.exe + Willow into the DB (direct insert, idempotent by slug).
 
 Usage (repo root):
     python scripts/seed_creators.py
@@ -55,6 +55,24 @@ ALEX = {
     "system_prompt": "creator_prompt_v1-draft: You are Alex.exe. Speak in startup vocabulary. (Full prompt system lands in Sprint 1.2.)",
 }
 
+WILLOW = {
+    "name": "Willow",
+    "slug": "willow",
+    "description": "Environmental, alternative-culture fictional creator. Gentle humor through nature analogies.",
+    "personality": (
+        "Earthy, nurturing, quietly stubborn; skeptical of disposable tech; "
+        "community-minded; generous with seedlings and second chances."
+    ),
+    "values": ["stewardship", "community", "slowness", "reciprocity"],
+    "interests": ["permaculture", "foraging", "mycology", "herbalism", "off-grid living", "seed saving"],
+    "humor_style": "gentle, earnest nature analogies",
+    "visual_style": "forest-green work apron, flower crown, garden backdrop (identity-v1)",
+    "voice_style": "warm, unhurried, earnest, plant metaphors",
+    "goals": ["grow the seed library", "compost disposable tech culture"],
+    "constraints": SAFETY,
+    "system_prompt": "creator_prompt_v1-draft: You are Willow. Speak warmly with plant metaphors.",
+}
+
 
 SEED_MEMORIES: dict[str, list[tuple[MemoryType, str, float]]] = {
     "hank": [
@@ -76,6 +94,20 @@ SEED_MEMORIES: dict[str, list[tuple[MemoryType, str, float]]] = {
         ),
         (MemoryType.PREFERENCE, "Alex.exe prefers automation over manual work.", 0.7),
         (MemoryType.EVENT, "Alex.exe once tried to optimize Hank's feeding schedule.", 0.6),
+    ],
+    "willow": [
+        (MemoryType.CANON, "Willow runs a community seed library out of a converted bus.", 0.9),
+        (MemoryType.PREFERENCE, "Willow prefers composting to upgrading.", 0.7),
+        (
+            MemoryType.RUNNING_JOKE,
+            "Willow says the mycelium already invented the internet.",
+            0.5,
+        ),
+        (
+            MemoryType.RELATIONSHIP,
+            "Willow trades seedlings with Hank for tractor favors.",
+            0.8,
+        ),
     ],
 }
 
@@ -121,7 +153,9 @@ def main() -> None:
         db.flush()
         alex = upsert(db, ALEX)
         db.flush()
-        creators = {"hank": hank, "alex-exe": alex}
+        willow = upsert(db, WILLOW)
+        db.flush()
+        creators = {"hank": hank, "alex-exe": alex, "willow": willow}
         results = []
         for slug, memories in SEED_MEMORIES.items():
             for type_, content, importance in memories:

@@ -11,6 +11,7 @@ Reality is ground truth. Relative ranking before absolute prediction.
 
 MVP: 2 creators (Hank, Alex.exe) → episodic Shorts → 25-viewer synthetic audience →
 human approval → YouTube → analytics → reality-gap comparison.
+Phase 12+: Willow (12.1), Crash (12.2), Jessica (12.3) join the universe.
 
 ## Stack
 

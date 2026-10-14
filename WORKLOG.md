@@ -615,6 +615,29 @@ removed before commit.
 
 ---
 
+## 2026-10-14 — Sprint 12.1 — Willow
+
+**Plan:** Third fictional creator (roadmap 12.1): environmental/alternative-
+culture, distinct across humor, interests, visual identity, audience response,
+and content strategy from Hank and Alex.exe.
+**Scope:** Willow seed (personality/values/interests/voice/safety) + spec
+(`docs/creator-specs/willow.md`) + 4 universe-tied memories (seed-library bus
+CANON, composting PREFERENCE, mycelium RUNNING_JOKE, seedling-trade
+RELATIONSHIP with Hank), `willow` identity default (terracotta/forest palette,
+flower crown + clay mug accessories), docs (AGENTS/README note the 12.x
+expansion), creators UI needs no change (new creator flows through existing
+list/detail/identity/memory/generation).
+**Implement:** seed/spec/identity art + 6 tests.
+**Verify:** `pytest` → **6 passed** (interests pairwise-disjoint across all
+three creators, three distinct humor styles, Willow identity defaults + portrait
+diff >0.02 vs both Hank and Alex, three distinct voices on the same message
+with Willow's permaculture token, Willow memories retrieved into generation,
+identity endpoint). Seed run idempotent including Willow creator + 4 memories.
+`npm run build` OK.
+**Commit:** Sprint 12.1 commit + push to `main`.
+
+---
+
 ## 2026-10-13 — Sprint 9.3 gap-fill — empirical random baseline
 
 **Plan:** Roadmap 9.3 asks to compare Simulator vs Random selection; the first

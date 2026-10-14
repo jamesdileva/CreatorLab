@@ -79,6 +79,21 @@ DEFAULT_IDENTITIES: dict[str, dict] = {
         "props": ["hammer"],
         "style": "loud, scorched, safety-orange",
     },
+    "jessica": {
+        "display_name": "Jessica",
+        "palette": {
+            "bg_top": "#1c1030",
+            "bg_bottom": "#0a0616",
+            "skin": "#c68e5f",
+            "shirt": "#6d28d9",
+            "hair": "#17131f",
+            "accent": "#f472b6",
+            "text": "#f3ecff",
+        },
+        "accessories": ["headphones"],
+        "props": ["controller"],
+        "style": "cozy, neon-lit, battlestation",
+    },
     "alex-exe": {
         "display_name": "Alex.exe",
         "palette": {
@@ -257,8 +272,37 @@ def _draw_prop_mug(draw, palette, x, y, w, h):
     draw.arc([x + w - 10, y + int(h * 0.2), x + w + 50, y + int(h * 0.75)], 270, 90, fill=accent, width=12)
 
 
+def _draw_headphones(draw, palette, cx, cy, scale):
+    """Over-ear headphones: band arc plus two ear cups, no mic boom."""
+    accent = _hex_rgb(palette["accent"])
+    hair = _hex_rgb(palette["hair"])
+    draw.arc(
+        [cx - int(175 * scale), cy - int(190 * scale), cx + int(175 * scale), cy + int(100 * scale)],
+        180, 360, fill=hair, width=int(26 * scale),
+    )
+    _rounded(draw, [cx - int(215 * scale), cy - int(70 * scale), cx - int(140 * scale), cy + int(70 * scale)], 30, accent)
+    _rounded(draw, [cx + int(140 * scale), cy - int(70 * scale), cx + int(215 * scale), cy + int(70 * scale)], 30, accent)
+
+
+def _draw_prop_controller(draw, palette, x, y, scale):
+    """Game controller: rounded body, d-pad cross, two buttons."""
+    accent = _hex_rgb(palette["accent"])
+    text = _hex_rgb(palette["text"])
+    _rounded(
+        draw,
+        [x, y, x + int(220 * scale), y + int(120 * scale)],
+        34,
+        accent,
+    )
+    cx, cy = x + int(50 * scale), y + int(60 * scale)
+    draw.rectangle([cx - int(28 * scale), cy - int(9 * scale), cx + int(28 * scale), cy + int(9 * scale)], fill=text)
+    draw.rectangle([cx - int(9 * scale), cy - int(28 * scale), cx + int(9 * scale), cy + int(28 * scale)], fill=text)
+    for bx in (x + int(150 * scale), x + int(185 * scale)):
+        draw.ellipse([bx - int(13 * scale), cy - int(13 * scale), bx + int(13 * scale), cy + int(13 * scale)], fill=text)
+
+
 def _draw_prop_hammer(draw, palette, x, y, scale):
-    """Sledgehammer leaning in the corner."""
+    """Sledgehammer leaning in the corner."""    """Sledgehammer leaning in the corner."""
     accent = _hex_rgb(palette["accent"])
     hair = _hex_rgb(palette["hair"])
     draw.line(
@@ -308,6 +352,8 @@ def render_portrait(identity: CharacterIdentity, path: Path) -> Path:
         _draw_flower(draw, palette, cx, head_cy - int(r * 0.8), 1.0)
     if "mohawk" in accessories:
         _draw_mohawk(draw, palette, cx, head_cy - r, 1.0)
+    if "headphones" in accessories:
+        _draw_headphones(draw, palette, cx, head_cy - r, 1.0)
 
     props = set(identity.props or [])
     if "gear" in props:
@@ -318,6 +364,8 @@ def render_portrait(identity: CharacterIdentity, path: Path) -> Path:
         _draw_prop_mug(draw, palette, 700, 1500, 170, 120)
     if "hammer" in props:
         _draw_prop_hammer(draw, palette, 700, 1450, 1.0)
+    if "controller" in props:
+        _draw_prop_controller(draw, palette, 660, 1520, 1.0)
 
     img.save(path)
     return path

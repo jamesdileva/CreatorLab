@@ -660,6 +660,29 @@ suites (willow, identity) 15 passed; `npm run build` OK.
 
 ---
 
+## 2026-10-14 — Sprint 12.3 — Jessica
+
+**Plan:** Fifth creator (roadmap 12.3): gaming creator; verify all five
+creators operate independently.
+**Scope:** Jessica seed (sportsmanship/persistence/fair-play/curiosity values,
+speedrunning/roguelikes/co-op/retro/esports/stream-chat interests, playful
+affectionate trash-talk humor, play-by-play voice) + spec
+(`docs/creator-specs/jessica.md`) + 4 universe-tied memories (Sundown Sprint
+record CANON, co-op PREFERENCE, lag-replay RUNNING_JOKE, Crash derby-challenge
+RELATIONSHIP), `jessica` identity default + new headphones/controller renderer
+art, creators UI needs no change.
+**Implement:** seed/spec/identity art + 6 tests.
+**Verify:** `pytest` → **6 passed** (interests pairwise-disjoint across all
+five, five distinct humor styles, Jessica identity defaults + portraits diff
+>0.02 vs all four, five distinct voices on the same message with Jessica's
+speedrunning token, Jessica memories retrieved, independence: per-creator
+isolated memories/voices/series/episodes with `memories_used` matching only
+each creator's own fact). Seed idempotent incl. Jessica creator + 4 memories;
+related suites (willow, crash, identity) 20 passed; `npm run build` OK.
+**Commit:** Sprint 12.3 commit + push to `main`.
+
+---
+
 ## 2026-10-13 — Sprint 9.3 gap-fill — empirical random baseline
 
 **Plan:** Roadmap 9.3 asks to compare Simulator vs Random selection; the first

@@ -595,6 +595,25 @@ suites green). `npm run build` OK (51 modules). Test-generated
 
 ---
 
+## 2026-10-13 — Sprint 9.3 gap-fill — empirical random baseline
+
+**Plan:** Roadmap 9.3 asks to compare Simulator vs Random selection; the first
+checkpoint (d260c4f) used analytic random expectations. This strengthens it
+with the actual experiment: a seeded random selector that shuffles the
+simulated order and is scored on the same pairwise comparisons.
+**Scope:** `empirical_random_selector` in `research_checkpoint.py` (deterministic
+per seed, seeds RECORDED: RANDOM_SEED=20261012, RANDOM_TRIALS=200), deltas now
+reference the empirical baseline when available, `verdict_text` outcome wording
+in the API, checkpoint UI shows the shuffled-selector baseline + verdict text.
+**Verify:** `pytest` checkpoint suites → **9 passed** (5 new: chance-level ≈0.5
+directional + ≈1/3 top-1 within tolerance, per-seed determinism, empty +
+single-item degradation, 6-experiment checkpoint reporting trials/verdict/
+verdict_text, empty checkpoint stays insufficient with wording). `npm run build`
+OK.
+**Commit:** Sprint 9.3 gap-fill commit + push to `main`.
+
+---
+
 ## 2026-10-13 — Sprint 11.3 — Audience Segments
 
 **Plan:** Group viewers based on behavior (roadmap 11.3): segments from reaction
@@ -634,7 +653,6 @@ diff >0.02 vs both Hank and Alex, three distinct voices on the same message
 with Willow's permaculture token, Willow memories retrieved into generation,
 identity endpoint). Seed run idempotent including Willow creator + 4 memories.
 `npm run build` OK.
-**Commit:** Sprint 12.1 commit + push to `main`.
 
 ---
 
@@ -665,37 +683,27 @@ suites (willow, identity) 15 passed; `npm run build` OK.
 **Plan:** Fifth creator (roadmap 12.3): gaming creator; verify all five
 creators operate independently.
 **Scope:** Jessica seed (sportsmanship/persistence/fair-play/curiosity values,
-speedrunning/roguelikes/co-op/retro/esports/stream-chat interests, playful
-affectionate trash-talk humor, play-by-play voice) + spec
-(`docs/creator-specs/jessica.md`) + 4 universe-tied memories (Sundown Sprint
-record CANON, co-op PREFERENCE, lag-replay RUNNING_JOKE, Crash derby-challenge
-RELATIONSHIP), `jessica` identity default + new headphones/controller renderer
-art, creators UI needs no change.
-**Implement:** seed/spec/identity art + 6 tests.
-**Verify:** `pytest` → **6 passed** (interests pairwise-disjoint across all
-five, five distinct humor styles, Jessica identity defaults + portraits diff
->0.02 vs all four, five distinct voices on the same message with Jessica's
-speedrunning token, Jessica memories retrieved, independence: per-creator
-isolated memories/voices/series/episodes with `memories_used` matching only
-each creator's own fact). Seed idempotent incl. Jessica creator + 4 memories;
-related suites (willow, crash, identity) 20 passed; `npm run build` OK.
-**Commit:** Sprint 12.3 commit + push to `main`.
 
----
+## 2026-10-14 — Sprint 13.1 — Relationship Graph
 
-## 2026-10-13 — Sprint 9.3 gap-fill — empirical random baseline
+**Plan:** Social continuity for the ecosystem (roadmap 13.1): pairwise
+relationships across five dimensions, changed by story events, with a full
+history trail.
+**Scope:** `models/relationship.py` (CreatorRelationship unordered unique pair
+with friendship/rivalry/respect/annoyance/collaboration 0..1 + RelationshipEvent
+history; six story events mapping to clamped dimension deltas),
+`services/relationship_service.py` (pair ordering + self-relationship rejection,
+event application with history records, notes), routes in `api/creators.py`
+(literal-first registration so `/relationships/...` is not shadowed by
+`/{creator_id}` — same class fixed in Sprint 4.3), 6 seeded universe
+relationships (Hank/Alex rivalry, Hank/Willow seedlings, Alex/Crash demo
+invoice, Crash/Jessica derbies, …), creator-detail relationships panel with
+event picker + history. Out of scope: cross-creator episode generation (13.2).
+**Implement:** models/service/routes/seeds/UI + 7 tests.
+**Verify:** `pytest` → **277 passed** (7 new: pair creation + idempotent reversal
+with normalized ordering, self-400/unknown-404, per-creator listing, roadmap
+event-change path with history accumulation + clamped deltas, unknown
+event_type-400/missing-404s, note update). Seed run reports 6 universe
+relationships created/updated. `npm run build` OK.
+**Commit:** Sprint 13.1 commit + push to `main`.
 
-**Plan:** Roadmap 9.3 asks to compare Simulator vs Random selection; the first
-checkpoint (d260c4f) used analytic random expectations. This strengthens it
-with the actual experiment: a seeded random selector that shuffles the
-simulated order and is scored on the same pairwise comparisons.
-**Scope:** `empirical_random_selector` in `research_checkpoint.py` (deterministic
-per seed, seeds RECORDED: RANDOM_SEED=20261012, RANDOM_TRIALS=200), deltas now
-reference the empirical baseline when available, `verdict_text` outcome wording
-in the API, checkpoint UI shows the shuffled-selector baseline + verdict text.
-**Verify:** `pytest` checkpoint suites → **9 passed** (5 new: chance-level ≈0.5
-directional + ≈1/3 top-1 within tolerance, per-seed determinism, empty +
-single-item degradation, 6-experiment checkpoint reporting trials/verdict/
-verdict_text, empty checkpoint stays insufficient with wording). `npm run build`
-OK.
-**Commit:** Sprint 9.3 gap-fill commit + push to `main`.

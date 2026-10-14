@@ -145,3 +145,62 @@ export const updateIdentity = (
     method: "PATCH",
     body: JSON.stringify(patch),
   });
+
+// relationships (Sprint 13.1)
+export interface Relationship {
+  id: number;
+  creator_a_id: number;
+  creator_b_id: number;
+  friendship: number;
+  rivalry: number;
+  respect: number;
+  annoyance: number;
+  collaboration: number;
+  note: string;
+  updated_at: string;
+}
+
+export interface RelationshipEvent {
+  id: number;
+  relationship_id: number;
+  event_type: string;
+  deltas: Record<string, number>;
+  note: string;
+  created_at: string;
+}
+
+export const EVENT_TYPES = [
+  "collaboration_success",
+  "collaboration_failure",
+  "rivalry_match",
+  "prank",
+  "reconciliation",
+  "shared_victory",
+];
+
+export const listRelationships = (creatorId: number): Promise<Relationship[]> =>
+  req<Relationship[]>(`${BASE}/${creatorId}/relationships`);
+
+export const createRelationship = (
+  aId: number,
+  bId: number
+): Promise<Relationship> =>
+  req<Relationship>(`${BASE}/relationships`, {
+    method: "POST",
+    body: JSON.stringify({ creator_a_id: aId, creator_b_id: bId }),
+  });
+
+export const applyRelationshipEvent = (
+  relationshipId: number,
+  eventType: string,
+  note = ""
+): Promise<{ relationship: Relationship; event: RelationshipEvent }> =>
+  req<{ relationship: Relationship; event: RelationshipEvent }>(
+    `${BASE}/relationships/${relationshipId}/events`,
+    { method: "POST", body: JSON.stringify({ event_type: eventType, note }) }
+  );
+
+export const listRelationshipEvents = (
+  relationshipId: number
+): Promise<RelationshipEvent[]> =>
+  req<RelationshipEvent[]>(`${BASE}/relationships/${relationshipId}/events`);

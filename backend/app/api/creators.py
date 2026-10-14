@@ -26,12 +26,154 @@ from ..services.character_service import (
 from ..services.creator_service import generate_creator_response
 from ..services.creator_strategy import build_strategy
 from ..services.creator_familiarity import describe_creator_audience
+from ..services.relationship_service import (
+    apply_story_event,
+    get_or_create_relationship,
+    set_note,
+)
 from ..services.performance_memory import (
     distill_performance_memories,
     summarize_performance,
 )
 
 router = APIRouter(prefix="/api/creators", tags=["creators"])
+
+# NOTE: literal-first-segment routes ("/relationships/...") must be registered
+# before "/{creator_id}" routes or the parameterized route 422s on them
+# (FastAPI matches in registration order — same class fixed in Sprint 4.3).
+
+
+class RelationshipCreateIn(BaseModel):
+    creator_a_id: int
+    creator_b_id: int
+
+
+class RelationshipRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    creator_a_id: int
+    creator_b_id: int
+    friendship: float
+    rivalry: float
+    respect: float
+    annoyance: float
+    collaboration: float
+    note: str
+    updated_at: datetime
+
+
+class EventIn(BaseModel):
+    event_type: str
+    note: str = ""
+
+
+class RelationshipEventRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    relationship_id: int
+    event_type: str
+    deltas: dict
+    note: str
+    created_at: datetime
+
+
+class NoteIn(BaseModel):
+    note: str
+
+
+@router.post(
+    "/relationships",
+    status_code=status.HTTP_201_CREATED,
+    response_model=RelationshipRead,
+)
+def create_relationship(payload: RelationshipCreateIn, db: Session = Depends(get_db)):
+    try:
+        return get_or_create_relationship(db, payload.creator_a_id, payload.creator_b_id)
+    except ValueError as exc:
+        message = str(exc)
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+                if "itself" in message
+                else status.HTTP_404_NOT_FOUND
+            ),
+            detail=message,
+        )
+
+
+@router.post(
+    "/relationships/{relationship_id}/events",
+    status_code=status.HTTP_201_CREATED,
+)
+def apply_relationship_event(
+    relationship_id: int, payload: EventIn, db: Session = Depends(get_db)
+):
+    try:
+        rel, event = apply_story_event(
+            db, relationship_id, payload.event_type, payload.note
+        )
+    except ValueError as exc:
+        message = str(exc)
+        raise HTTPException(
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+                if "event_type" in message
+                else status.HTTP_404_NOT_FOUND
+            ),
+            detail=message,
+        )
+    return {
+        "relationship": RelationshipRead.model_validate(rel),
+        "event": RelationshipEventRead.model_validate(event),
+    }
+
+
+@router.get(
+    "/relationships/{relationship_id}/events",
+    response_model=list[RelationshipEventRead],
+)
+def list_relationship_events(relationship_id: int, db: Session = Depends(get_db)):
+    from ..models.relationship import CreatorRelationship, RelationshipEvent
+
+    if db.get(CreatorRelationship, relationship_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="relationship not found"
+        )
+    return (
+        db.query(RelationshipEvent)
+        .filter(RelationshipEvent.relationship_id == relationship_id)
+        .order_by(RelationshipEvent.id)
+        .all()
+    )
+
+
+@router.patch("/relationships/{relationship_id}", response_model=RelationshipRead)
+def update_relationship_note(
+    relationship_id: int, payload: NoteIn, db: Session = Depends(get_db)
+):
+    try:
+        return set_note(db, relationship_id, payload.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.get("/{creator_id}/relationships", response_model=list[RelationshipRead])
+def list_creator_relationships(creator_id: int, db: Session = Depends(get_db)):
+    from ..models.relationship import CreatorRelationship
+
+    _get_or_404(db, creator_id)
+    return (
+        db.query(CreatorRelationship)
+        .filter(
+            (CreatorRelationship.creator_a_id == creator_id)
+            | (CreatorRelationship.creator_b_id == creator_id)
+        )
+        .order_by(CreatorRelationship.id)
+        .all()
+    )
+
 
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 

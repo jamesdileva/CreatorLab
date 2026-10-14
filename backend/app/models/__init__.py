@@ -8,6 +8,7 @@ from .creator_memory import CreatorMemory, MemoryType
 from .episode import Episode, EpisodeStatus
 from .experiment import ContentExperiment
 from .published_video import PublishedVideo
+from .relationship import CreatorRelationship, RelationshipEvent
 from .render import AssetKind, Render, RenderStatus
 from .scene import Scene
 from .series import Series, SeriesStatus
@@ -45,6 +46,8 @@ __all__ = [
     "RANKING_VERSION",
     "REACTION_VERSION",
     "RankingRun",
+    "RelationshipEvent",
+    "CreatorRelationship",
     "Render",
     "RenderStatus",
     "Scene",

@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
+  applyRelationshipEvent,
   createMemory,
+  createRelationship,
   deleteMemory,
   distillPerformance,
+  EVENT_TYPES,
   generateCreatorVoice,
   getCreator,
   getIdentity,
   getPerformance,
   listMemories,
+  listRelationshipEvents,
+  listRelationships,
   updateCreator,
   updateIdentity,
 } from "../services/creators";
 import type { PerformanceSummary } from "../services/creators";
 import { MEMORY_TYPES } from "../types/creator";
-import type { CharacterIdentity } from "../services/creators";
+import type { CharacterIdentity, Relationship, RelationshipEvent } from "../services/creators";
 import type { Creator, CreatorMemory, CreatorVoice } from "../types/creator";
 
 const env = import.meta.env as Record<string, string | undefined>;
@@ -46,6 +51,10 @@ export default function CreatorDetail() {
   const [memImportance, setMemImportance] = useState("0.5");
   const [identity, setIdentity] = useState<CharacterIdentity | null>(null);
   const [performance, setPerformance] = useState<PerformanceSummary | null>(null);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [relEvents, setRelEvents] = useState<Record<number, RelationshipEvent[]>>({});
+  const [relEventType, setRelEventType] = useState<string>(EVENT_TYPES[0]);
+  const [relNote, setRelNote] = useState("");
   const [perfError, setPerfError] = useState("");
   const [perfBusy, setPerfBusy] = useState(false);
 
@@ -70,6 +79,9 @@ export default function CreatorDetail() {
     getIdentity(String(creatorId))
       .then(setIdentity)
       .catch(() => setIdentity(null));
+    listRelationships(creatorId)
+      .then(setRelationships)
+      .catch(() => setRelationships([]));
   };
 
   useEffect(() => {
@@ -86,8 +98,29 @@ export default function CreatorDetail() {
       });
   }, [id]);
 
-  const onCreateMemory = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onApplyRelEvent = async (relId: number) => {
+    try {
+      const res = await applyRelationshipEvent(relId, relEventType, relNote);
+      setRelationships((rs) => rs.map((r) => (r.id === relId ? res.relationship : r)));
+      const history = await listRelationshipEvents(relId);
+      setRelEvents((prev) => ({ ...prev, [relId]: history }));
+      setRelNote("");
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "event failed");
+    }
+  };
+
+  const onShowRelHistory = async (relId: number) => {
+    try {
+      const history = await listRelationshipEvents(relId);
+      setRelEvents((prev) => ({ ...prev, [relId]: history }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "history failed");
+    }
+  };
+
+  const onCreateMemory = async (e: React.FormEvent) => {    e.preventDefault();
     if (!creator) return;
     createMemory(creator.id, {
       type: memType,
@@ -411,6 +444,71 @@ export default function CreatorDetail() {
             (portrait renders on demand via the render flow)
           </p>
         </div>
+      )}
+
+      <h2>Relationships (Sprint 13.1)</h2>
+      {relationships.length === 0 ? (
+        <p>no relationships yet</p>
+      ) : (
+        relationships.map((r) => {
+          const partnerId =
+            r.creator_a_id === creator.id ? r.creator_b_id : r.creator_a_id;
+          return (
+            <div
+              key={r.id}
+              style={{
+                border: "1px solid #ccc",
+                borderRadius: 8,
+                padding: 12,
+                marginTop: 8,
+              }}
+            >
+              <p>
+                <strong>creator #{partnerId}</strong>
+                {r.note ? ` — ${r.note}` : ""}
+              </p>
+              <p style={{ fontSize: 12 }}>
+                {(
+                  ["friendship", "rivalry", "respect", "annoyance", "collaboration"] as const
+                ).map((d) => (
+                  <span key={d} style={{ marginRight: 12 }}>
+                    {d}: {(r[d] ?? 0).toFixed(2)}
+                  </span>
+                ))}
+              </p>
+              <div>
+                <select
+                  value={relEventType}
+                  onChange={(e) => setRelEventType(e.target.value)}
+                >
+                  {EVENT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>{" "}
+                <input
+                  placeholder="story event note"
+                  value={relNote}
+                  onChange={(e) => setRelNote(e.target.value)}
+                  style={{ width: "45%" }}
+                />{" "}
+                <button onClick={() => void onApplyRelEvent(r.id)}>apply event</button>{" "}
+                <button onClick={() => void onShowRelHistory(r.id)}>history</button>
+              </div>
+              {relEvents[r.id] && (
+                <ul>
+                  {relEvents[r.id].map((ev) => (
+                    <li key={ev.id} style={{ fontSize: 12 }}>
+                      {ev.event_type}
+                      {ev.note ? ` — ${ev.note}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })
       )}
     </main>
   );

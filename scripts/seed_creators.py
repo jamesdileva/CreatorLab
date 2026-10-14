@@ -11,6 +11,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 from app.core.database import Base, SessionLocal, engine  # noqa: E402
 from app.models.creator import Creator  # noqa: E402
 from app.models.creator_memory import CreatorMemory, MemoryType  # noqa: E402
+from app.models.relationship import CreatorRelationship  # noqa: E402
+from app.services.relationship_service import (  # noqa: E402
+    apply_story_event,
+    get_or_create_relationship,
+)
 
 SAFETY = (
     "Fictional character only; never impersonate real people. "
@@ -205,6 +210,47 @@ def upsert_memory(
     return f"~ memory {content[:48]!r}"
 
 
+SEED_RELATIONSHIPS: list[tuple[str, str, dict[str, float], str]] = [
+    # (slug_a, slug_b, dimensions, note)
+    ("hank", "alex-exe",
+     {"rivalry": 0.6, "annoyance": 0.4, "respect": 0.3},
+     "Hank distrusts Alex.exe's automation; Alex.exe sees an untapped market."),
+    ("hank", "willow",
+     {"friendship": 0.7, "respect": 0.5},
+     "Seedlings for tractor favors; mutual rural trust."),
+    ("willow", "alex-exe",
+     {"annoyance": 0.4, "respect": 0.2},
+     "Willow finds Alex.exe exhausting but compostable."),
+    ("alex-exe", "crash",
+     {"collaboration": 0.5, "annoyance": 0.5, "rivalry": 0.2},
+     "Hired for a demolition demo; invoice regretted."),
+    ("crash", "jessica",
+     {"rivalry": 0.6, "friendship": 0.4},
+     "Demolition-derby challenges; she beats him and posts the replay."),
+    ("hank", "crash",
+     {"friendship": 0.3, "annoyance": 0.3},
+     "Hank lends tools and counts them twice afterward."),
+]
+
+
+def upsert_relationship(db, slug_a: str, slug_b: str, dims: dict, note: str) -> str:
+    a = db.query(Creator).filter_by(slug=slug_a).one()
+    b = db.query(Creator).filter_by(slug=slug_b).one()
+    rel = get_or_create_relationship(db, a.id, b.id)
+    changed = False
+    for dim, value in dims.items():
+        if getattr(rel, dim) != value:
+            setattr(rel, dim, value)
+            changed = True
+    if rel.note != note:
+        rel.note = note
+        changed = True
+    if changed:
+        db.commit()
+        return f"~ relationship {slug_a} <-> {slug_b}"
+    return f"= relationship {slug_a} <-> {slug_b}"
+
+
 def main() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -226,6 +272,8 @@ def main() -> None:
                 results.append(
                     upsert_memory(db, creators[slug].id, type_, content, importance)
                 )
+        for slug_a, slug_b, dims, note in SEED_RELATIONSHIPS:
+            results.append(upsert_relationship(db, slug_a, slug_b, dims, note))
         db.commit()
     finally:
         db.close()

@@ -638,6 +638,28 @@ identity endpoint). Seed run idempotent including Willow creator + 4 memories.
 
 ---
 
+## 2026-10-14 — Sprint 12.2 — Crash
+
+**Plan:** Fourth creator (roadmap 12.2): chaotic absurdist with a distinct
+comedic style from Hank, Alex.exe, and Willow.
+**Scope:** Crash seed (spectacle/momentum/loyalty/improvisation values,
+slapstick/demolition/stunt/prank/junkyard/fireworks interests, chaotic
+absurdist non-sequitur humor, loud escalating voice) + spec
+(`docs/creator-specs/crash.md`) + 4 universe-tied memories (toaster
+jump-start CANON, always-breaks-it RUNNING_JOKE, louder-solutions PREFERENCE,
+Alex demo-invoice RELATIONSHIP), `crash` identity default + new mohawk/
+sledgehammer renderer art, creators UI needs no change.
+**Implement:** seed/spec/identity art + 5 tests.
+**Verify:** `pytest` → **5 passed** (interests pairwise-disjoint across all
+four creators, four distinct humor styles incl. chaotic absurdist, Crash
+identity defaults + portraits diff >0.02 vs all three, four distinct voices
+on the same message with Crash's demolition token, Crash memories retrieved
+into generation). Seed idempotent incl. Crash creator + 4 memories; related
+suites (willow, identity) 15 passed; `npm run build` OK.
+**Commit:** Sprint 12.2 commit + push to `main`.
+
+---
+
 ## 2026-10-13 — Sprint 9.3 gap-fill — empirical random baseline
 
 **Plan:** Roadmap 9.3 asks to compare Simulator vs Random selection; the first

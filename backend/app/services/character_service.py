@@ -64,6 +64,21 @@ DEFAULT_IDENTITIES: dict[str, dict] = {
         "props": ["mug"],
         "style": "earthy, handmade, garden-worn",
     },
+    "crash": {
+        "display_name": "Crash",
+        "palette": {
+            "bg_top": "#33153d",
+            "bg_bottom": "#12060f",
+            "skin": "#d9a06f",
+            "shirt": "#c2410c",
+            "hair": "#111111",
+            "accent": "#facc15",
+            "text": "#fdf3e3",
+        },
+        "accessories": ["mohawk"],
+        "props": ["hammer"],
+        "style": "loud, scorched, safety-orange",
+    },
     "alex-exe": {
         "display_name": "Alex.exe",
         "palette": {
@@ -224,10 +239,39 @@ def _draw_prop_terminal(draw, palette, x, y, w, h):
     draw.rectangle([x + int(w * 0.12), y + int(h * 0.2), x + int(w * 0.55), y + int(h * 0.3)], fill=(10, 12, 20))
 
 
+def _draw_mohawk(draw, palette, cx, cy, scale):
+    """Spiky mohawk strip along the crown."""
+    accent = _hex_rgb(palette["accent"])
+    hair = _hex_rgb(palette["hair"])
+    base_y = cy + int(40 * scale)
+    for i, dx in enumerate(range(-120, 140, 40)):
+        x = cx + int(dx * scale)
+        h = int((120 - abs(dx) // 2) * scale)
+        color = accent if i % 2 == 0 else hair
+        draw.polygon([(x - int(22 * scale), base_y), (x + int(22 * scale), base_y), (x, base_y - h)], fill=color)
+
+
 def _draw_prop_mug(draw, palette, x, y, w, h):
     accent = _hex_rgb(palette["accent"])
     _rounded(draw, [x, y, x + w, y + h], 16, accent)
     draw.arc([x + w - 10, y + int(h * 0.2), x + w + 50, y + int(h * 0.75)], 270, 90, fill=accent, width=12)
+
+
+def _draw_prop_hammer(draw, palette, x, y, scale):
+    """Sledgehammer leaning in the corner."""
+    accent = _hex_rgb(palette["accent"])
+    hair = _hex_rgb(palette["hair"])
+    draw.line(
+        [(x, y), (x + int(60 * scale), y + int(220 * scale))],
+        fill=hair,
+        width=int(22 * scale),
+    )
+    _rounded(
+        draw,
+        [x - int(70 * scale), y - int(50 * scale), x + int(110 * scale), y + int(30 * scale)],
+        14,
+        accent,
+    )
 
 
 def render_portrait(identity: CharacterIdentity, path: Path) -> Path:
@@ -262,6 +306,8 @@ def render_portrait(identity: CharacterIdentity, path: Path) -> Path:
         _draw_headset(draw, palette, cx, head_cy - r, 1.0)
     if "flower" in accessories:
         _draw_flower(draw, palette, cx, head_cy - int(r * 0.8), 1.0)
+    if "mohawk" in accessories:
+        _draw_mohawk(draw, palette, cx, head_cy - r, 1.0)
 
     props = set(identity.props or [])
     if "gear" in props:
@@ -270,6 +316,8 @@ def render_portrait(identity: CharacterIdentity, path: Path) -> Path:
         _draw_prop_terminal(draw, palette, 700, 1500, 200, 130)
     if "mug" in props:
         _draw_prop_mug(draw, palette, 700, 1500, 170, 120)
+    if "hammer" in props:
+        _draw_prop_hammer(draw, palette, 700, 1450, 1.0)
 
     img.save(path)
     return path

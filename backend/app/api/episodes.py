@@ -15,6 +15,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..ai.structured_output import ParseError
+from ..services.concept_service import ConceptsBlockedError, generate_concepts
+from ..services.cross_episode_service import (
+    CrossEpisodeError,
+    generate_cross_episode,
+)
 from ..core.database import get_db
 from ..models.canon import Canon, CanonCategory
 from ..models.concept import Concept, ConceptSet
@@ -1121,4 +1126,80 @@ def generate_episode_endpoint(
         canon_used=result.canon_used,
         memories_used=result.memories_used,
         resolved_threads=result.resolved_threads,
+    )
+
+
+# ---------- Cross-creator episodes (Sprint 13.2) ----------
+
+
+class GenerateCrossEpisodeIn(BaseModel):
+    participant_ids: list[int]
+    prompt_version: str | None = None
+    provider: str | None = None
+
+
+class CrossDraftRead(BaseModel):
+    participants: list[str]
+    premise: str
+    synopsis: str
+    scenes: list[DraftSceneRead]
+    script: str
+
+
+class GenerateCrossEpisodeOut(BaseModel):
+    episode: EpisodeRead
+    draft: CrossDraftRead
+    evaluation_status: str
+    issues: list[IssueRead]
+    prompt_version: str
+    provider: str
+    model: str
+    cast_used: list[str]
+
+
+@router.post(
+    "/api/series/{series_id}/generate-cross-episode",
+    response_model=GenerateCrossEpisodeOut,
+)
+def generate_cross_episode_endpoint(
+    series_id: int, payload: GenerateCrossEpisodeIn, db: Session = Depends(get_db)
+) -> GenerateCrossEpisodeOut:
+    try:
+        result = generate_cross_episode(
+            db,
+            series_id,
+            payload.participant_ids,
+            prompt_version=payload.prompt_version,
+            provider_name=payload.provider,
+        )
+    except ParseError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    except CrossEpisodeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"unknown prompt version: {exc}",
+        )
+    return GenerateCrossEpisodeOut(
+        episode=EpisodeRead.model_validate(result.episode),
+        draft=CrossDraftRead(
+            participants=result.draft.participants,
+            premise=result.draft.premise,
+            synopsis=result.draft.synopsis,
+            scenes=[
+                DraftSceneRead.model_validate(s.model_dump())
+                for s in result.draft.scenes
+            ],
+            script=result.draft.script,
+        ),
+        evaluation_status=result.evaluation.status,
+        issues=[
+            IssueRead(code=i.code, severity=i.severity.value, detail=i.detail)
+            for i in result.evaluation.issues
+        ],
+        prompt_version=result.prompt_version,
+        provider=result.provider,
+        model=result.model,
+        cast_used=result.cast_used,
     )

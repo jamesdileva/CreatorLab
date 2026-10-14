@@ -237,10 +237,69 @@ def _episode_JSON(request: GenerateRequest) -> str:
     return "```json\n" + json.dumps(draft) + "\n```"
 
 
+def _cross_episode_JSON(request: GenerateRequest) -> str:
+    """Deterministic crossover draft; the cast comes from the prompt's list."""
+    participants = _prompt_participants(request.system_prompt)
+    premise = (
+        f"{participants[0]} has a problem nobody should solve alone, and "
+        f"{participants[1]} insists on helping their way."
+    )
+    synopsis = (
+        f"A shared problem forces {participants[0]} and {participants[1]} to "
+        "negotiate one plan; the plan half-works, and together they finish it."
+    )
+    scenes = [
+        ("The problem", f"{participants[0]} explains what broke."),
+        ("The negotiation", f"{participants[1]} proposes an ambitious fix."),
+        ("The breakdown", "The ambitious fix makes it worse."),
+        ("The finish", "They combine approaches and succeed."),
+    ]
+    script_lines = [
+        f"CROSSOVER — {' AND '.join(participants)}",
+        "INT. THE PLACE — DAY",
+    ]
+    for title, direction in scenes:
+        script_lines.append(f"* {title} — {direction}")
+    for name in participants:
+        script_lines.append(f"{name}: We're only doing this my way.")
+    script_lines.append("END.")
+    draft = {
+        "participants": participants,
+        "premise": premise,
+        "synopsis": synopsis,
+        "scenes": [{"title": t, "direction": d} for t, d in scenes],
+        "script": "\n".join(script_lines),
+    }
+    return "```json\n" + json.dumps(draft) + "\n```"
+
+
+def _prompt_participants(system_prompt: str) -> list[str]:
+    """Read the cast section out of the rendered cross prompt."""
+    names: list[str] = []
+    in_cast = False
+    for line in system_prompt.splitlines():
+        stripped = line.strip()
+        if stripped == "## Cast":
+            in_cast = True
+            continue
+        if in_cast:
+            if stripped.startswith("## "):
+                break
+            if stripped.startswith("- "):
+                candidate = stripped[2:].split(" (")[0].strip()
+                if candidate and candidate.lower() not in {"none yet", "(none)"}:
+                    names.append(candidate)
+    return names or ["Hank", "Alex.exe"]
+
+
 class StubProvider(LLMProvider):
     name = "stub"
 
     def generate(self, request: GenerateRequest) -> GenerateResponse:
+        if request.response_format == "cross_episode":
+            return GenerateResponse(
+                text=_cross_episode_JSON(request), model="stub/deterministic-v1"
+            )
         if request.response_format == "concepts":
             return GenerateResponse(
                 text=_concepts_JSON(request), model="stub/deterministic-v1"

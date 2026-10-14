@@ -25,6 +25,36 @@ export const listSeries = (creatorId?: number): Promise<Series[]> =>
 export const getSeries = (id: number): Promise<Series> =>
   req<Series>(`${ROOT}/api/series/${id}`);
 
+// cross-creator episodes (Sprint 13.2)
+export interface CrossEpisodeResult {
+  episode: Episode;
+  draft: {
+    participants: string[];
+    premise: string;
+    synopsis: string;
+    scenes: Scene[];
+    script: string;
+  };
+  evaluation_status: string;
+  issues: { code: string; severity: string; detail: string }[];
+  prompt_version: string;
+  provider: string;
+  model: string;
+  cast_used: string[];
+}
+
+export const generateCrossEpisode = (
+  seriesId: number,
+  participantIds: number[]
+): Promise<CrossEpisodeResult> =>
+  req<CrossEpisodeResult>(
+    `${ROOT}/api/series/${seriesId}/generate-cross-episode`,
+    {
+      method: "POST",
+      body: JSON.stringify({ participant_ids: participantIds }),
+    }
+  );
+
 export const createSeries = (name: string, creatorId: number): Promise<Series> =>
   req<Series>(`${ROOT}/api/series`, {
     method: "POST",

@@ -27,6 +27,16 @@ class ConceptItem(BaseModel):
     tags: list[str] = []
 
 
+class CrossEpisodeDraft(BaseModel):
+    """Multi-creator episode draft (roadmap Sprint 13.2)."""
+
+    participants: list[str] = Field(default_factory=list)
+    premise: str = Field(min_length=1)
+    synopsis: str = Field(min_length=1)
+    scenes: list[SceneDraft] = Field(min_length=3, max_length=6)
+    script: str = Field(min_length=1)
+
+
 def parse_concepts(text: str, minimum: int = 3, maximum: int = 10) -> list[ConceptItem]:
     """Parse a JSON array of concept items (roadmap Sprint 3.1)."""
     try:
@@ -38,10 +48,20 @@ def parse_concepts(text: str, minimum: int = 3, maximum: int = 10) -> list[Conce
     except Exception as exc:
         raise ParseError(f"concepts failed validation: {exc}") from exc
     if not minimum <= len(items) <= maximum:
-        raise ParseError(
-            f"expected {minimum}-{maximum} concepts, got {len(items)}"
-        )
+        raise ParseError(f"expected {minimum}-{maximum} concepts, got {len(items)}")
     return items
+
+
+def parse_cross_episode_draft(text: str) -> CrossEpisodeDraft:
+    """Parse a multi-creator episode draft (roadmap Sprint 13.2)."""
+    try:
+        data = _extract_json(text)
+    except (json.JSONDecodeError, AttributeError) as exc:
+        raise ParseError(f"output is not valid JSON: {exc}") from exc
+    try:
+        return CrossEpisodeDraft.model_validate(data)
+    except Exception as exc:
+        raise ParseError(f"crossover draft failed validation: {exc}") from exc
 
 
 class ParseError(ValueError):

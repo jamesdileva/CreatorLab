@@ -12,6 +12,7 @@ PROMPT_VERSIONS: dict[str, str] = {
     "creator_prompt_v1": "creator_prompt_v1.md",
     "episode_prompt_v1": "episode_prompt_v1.md",
     "concepts_prompt_v1": "concepts_prompt_v1.md",
+    "cross_episode_prompt_v1": "cross_episode_prompt_v1.md",
 }
 
 
@@ -115,6 +116,31 @@ def render_episode_prompt(
         "open_threads": _bullets(open_threads),
         "next_episode_number": str(next_episode_number),
         "variant": str(variant),
+        "json_schema": json_schema,
+    }
+    return _render(_load(PROMPT_VERSIONS[version]), values)
+
+def render_cross_episode_prompt(
+    cast: list[str],
+    series_name: str,
+    canon: list[str],
+    memories: list[str],
+    relationships: list[str],
+    open_threads: list[str],
+    previous_episodes: list[str],
+    json_schema: str,
+    version: str = "cross_episode_prompt_v1",
+) -> str:
+    if version not in PROMPT_VERSIONS:
+        raise KeyError(f"unknown prompt version: {version}")
+    values = {
+        "series_name": series_name,
+        "cast": "\n".join(f"- {member}" for member in cast),
+        "canon": _bullets(canon),
+        "memories": _bullets(memories),
+        "relationships": _bullets(relationships),
+        "open_threads": _bullets(open_threads),
+        "previous_episodes": _bullets(previous_episodes),
         "json_schema": json_schema,
     }
     return _render(_load(PROMPT_VERSIONS[version]), values)

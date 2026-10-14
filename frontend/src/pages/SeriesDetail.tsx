@@ -7,6 +7,7 @@ import {
   createThread,
   endSeries,
   generateConcepts,
+  generateCrossEpisode,
   generateEpisode,
   listCanon,
   listConceptSets,
@@ -15,11 +16,13 @@ import {
   listThreads,
   resolveThread,
 } from "../services/story";
+import { listCreators } from "../services/creators";
 import { CANON_CATEGORIES } from "../types/story";
 import type { CanonEntry, Episode, StoryThread } from "../types/story";
 import type {
   Concept,
   ConceptSetSummary,
+  CrossEpisodeResult,
   GeneratedConcepts,
   GeneratedEpisode,
 } from "../services/story";
@@ -47,6 +50,10 @@ export default function SeriesDetail() {
   const [conceptSets, setConceptSets] = useState<ConceptSetSummary[]>([]);
   const [openSetId, setOpenSetId] = useState<number | null>(null);
   const [openSetConcepts, setOpenSetConcepts] = useState<Concept[]>([]);
+  const [creators, setCreators] = useState<{ id: number; name: string }[]>([]);
+  const [participants, setParticipants] = useState<number[]>([]);
+  const [crossResult, setCrossResult] = useState<CrossEpisodeResult | null>(null);
+  const [crossBusy, setCrossBusy] = useState(false);
 
   const onGenerateEpisode = async () => {
     setGenerating(true);
@@ -73,8 +80,36 @@ export default function SeriesDetail() {
     getSeries(seriesId)
       .then(setSeries)
       .catch((e) => setError(e instanceof Error ? e.message : "load failed"));
+    listCreators(false)
+      .then((cs) => {
+        setCreators(cs.map((c) => ({ id: c.id, name: c.name })));
+        setParticipants((prev) => (prev.length ? prev : []));
+      })
+      .catch(() => setCreators([]));
     refresh();
   }, [seriesId]);
+
+  const onGenerateCross = async () => {
+    setCrossBusy(true);
+    try {
+      const result = await generateCrossEpisode(seriesId, participants);
+      setCrossResult(result);
+      refresh();
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "crossover failed");
+    } finally {
+      setCrossBusy(false);
+    }
+  };
+
+  const toggleParticipant = (creatorId: number) => {
+    setParticipants((prev) =>
+      prev.includes(creatorId)
+        ? prev.filter((x) => x !== creatorId)
+        : [...prev, creatorId]
+    );
+  };
 
   const onCreateEpisode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,6 +236,58 @@ export default function SeriesDetail() {
         />{" "}
         <button type="submit">add episode</button>
       </form>
+
+      <h2>Cross-creator episode (Sprint 13.2)</h2>
+      <p style={{ fontSize: 12, color: "#555" }}>
+        Pick 2-3 creators (must include the series creator). One coherent
+        A-story is generated using both creators' canon and their relationship.
+      </p>
+      <div>
+        {creators.map((c) => (
+          <label key={c.id} style={{ marginRight: 12 }}>
+            <input
+              type="checkbox"
+              checked={participants.includes(c.id)}
+              onChange={() => toggleParticipant(c.id)}
+            />{" "}
+            {c.name}
+          </label>
+        ))}
+      </div>
+      <button
+        disabled={crossBusy || participants.length < 2 || series?.status !== "ACTIVE"}
+        onClick={() => void onGenerateCross()}
+      >
+        {crossBusy ? "generating…" : "generate crossover"}
+      </button>
+      {crossResult && (
+        <div
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: 8,
+            padding: 12,
+            marginTop: 8,
+          }}
+        >
+          <p>
+            <strong>{crossResult.evaluation_status}</strong> — cast:{" "}
+            {crossResult.cast_used.join(" + ")} · prompt{" "}
+            {crossResult.prompt_version} · model {crossResult.model}
+          </p>
+          <p style={{ whiteSpace: "pre-wrap" }}>{crossResult.draft.premise}</p>
+          <p>{crossResult.draft.synopsis}</p>
+          {crossResult.issues.map((i, idx) => (
+            <p key={idx} style={{ color: "crimson" }}>
+              {i.severity}: {i.code} — {i.detail}
+            </p>
+          ))}
+          <p>
+            <Link to={`/episodes/${crossResult.episode.id}`}>
+              open episode detail →
+            </Link>
+          </p>
+        </div>
+      )}
 
       <h2>Generate episode (Sprint 2.2)</h2>
       <p style={{ fontSize: 12, color: "#555" }}>

@@ -707,3 +707,32 @@ event_type-400/missing-404s, note update). Seed run reports 6 universe
 relationships created/updated. `npm run build` OK.
 **Commit:** Sprint 13.1 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 13.2 — Cross-Creator Episodes
+
+**Plan:** Generate coherent cross-character episodes involving multiple
+creators (roadmap 13.2) — e.g. Hank asks Alex.exe to repair his tractor.
+**Scope:** `CrossEpisodeDraft` parsing (participants/premise/synopsis/scenes/
+script), `cross_episode_prompt_v1.md` (cast section + combined canon, memories
+from ALL participants, relationship profile between them), stub deterministic
+4-beat crossover archetype (problem → negotiation → breakdown → finish, every
+participant speaks), `cross_episode_service.py` (host must participate,
+2-3 participants, duplicate collapse, relationship echo or "unknown" guidance),
+evaluation gates (`unknown_participant` BLOCK, `missing_participant`/
+`silent_participant` REVIEW layered on the standard draft evaluation),
+`POST /api/series/{id}/generate-cross-episode`, series-detail participant
+picker + cast/issues preview. Out of scope: cross-channel publishing behavior
+(documentation-only boundary noted below).
+**Implement:** draft/prompt/stub/service/endpoints/UI + 11 tests.
+**Verify:** `pytest` → **288 passed** (11 new: endpoint end-to-end with 2
+creators + relationship (cast, premise, 4 scenes, both voices in script,
+status/version/cast_used, persisted episode + scenes), coherent beat structure,
+duplicate collapse, single-400, non-host-400, unknown-creator-400, ended-400,
+three-creator cast, silent/missing flags, unknown-participant BLOCK).
+`npm run build` OK.
+**Note:** cross-creator storytelling is fictional continuity only — creator
+accounts never interact to manufacture engagement (architecture §4/§20);
+no cross-posting automation exists.
+**Commit:** Sprint 13.2 commit + push to `main`.
+

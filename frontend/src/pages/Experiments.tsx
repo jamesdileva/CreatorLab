@@ -72,6 +72,24 @@ interface GapBucket {
   sample_sufficient: boolean;
 }
 
+interface Calibration {
+  min_samples: number;
+  samples: number;
+  interpretation_allowed: boolean;
+  model: { slope: number; intercept: number; residual_std: number; form: string };
+  coverage: number | null;
+  mae: number | null;
+  mape: number | null;
+  predictions: {
+    experiment_id: number;
+    simulator_score: number;
+    observed_views: number;
+    predicted: { point: number; low: number; high: number };
+    within_range: boolean;
+  }[];
+  verdict: string;
+}
+
 interface GapDashboard {
   generated_at: string;
   min_samples: number;
@@ -118,6 +136,7 @@ export default function Experiments() {
   const [error, setError] = useState("");
   const [dashboard, setDashboard] = useState<GapDashboard | null>(null);
   const [checkpoint, setCheckpoint] = useState<Checkpoint | null>(null);
+  const [calibration, setCalibration] = useState<Calibration | null>(null);
 
   useEffect(() => {
     req<ExperimentRow[]>(`${ROOT}/api/experiments`)
@@ -129,6 +148,9 @@ export default function Experiments() {
     req<Checkpoint>(`${ROOT}/api/experiments/research-checkpoint`)
       .then(setCheckpoint)
       .catch(() => setCheckpoint(null));
+    req<Calibration>(`${ROOT}/api/experiments/calibration`)
+      .then(setCalibration)
+      .catch(() => setCalibration(null));
   }, []);
 
   const onCreate = async (e: React.FormEvent) => {
@@ -216,6 +238,58 @@ export default function Experiments() {
         </div>
       ) : (
         <p>dashboard unavailable</p>
+      )}
+
+      <h2>Calibration (Sprint 15.1)</h2>
+      {calibration ? (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            samples {calibration.samples} (need ≥{calibration.min_samples}) ·{" "}
+            {calibration.model.form} = {calibration.model.slope}·score +{" "}
+            {calibration.model.intercept} · residual σ {calibration.model.residual_std}
+          </p>
+          {calibration.interpretation_allowed ? (
+            <p>
+              range coverage {(calibration.coverage! * 100).toFixed(1)}% · MAE{" "}
+              {calibration.mae} · MAPE{" "}
+              {calibration.mape !== null
+                ? `${(calibration.mape * 100).toFixed(1)}%`
+                : "—"}{" "}
+              — {calibration.verdict}
+            </p>
+          ) : (
+            <p>Insufficient samples — ranges withheld until ≥{calibration.min_samples}.</p>
+          )}
+          {calibration.predictions.length > 0 && (
+            <table>
+              <thead>
+                <tr>
+                  <th>experiment</th>
+                  <th>score</th>
+                  <th>observed</th>
+                  <th>predicted range</th>
+                  <th>in range</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calibration.predictions.map((p) => (
+                  <tr key={p.experiment_id}>
+                    <td>#{p.experiment_id}</td>
+                    <td>{p.simulator_score}</td>
+                    <td>{p.observed_views}</td>
+                    <td>
+                      {p.predicted.low}–{p.predicted.high} (point{" "}
+                      {p.predicted.point})
+                    </td>
+                    <td>{p.within_range ? "yes" : "no"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : (
+        <p>calibration unavailable</p>
       )}
       <ul>
         {rows.map((r) => (

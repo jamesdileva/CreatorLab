@@ -81,6 +81,16 @@ def research_checkpoint(min_samples: int = 5, db: Session = Depends(get_db)) -> 
     return build_checkpoint(db, min_samples=min_samples)
 
 
+# ---------- Prediction calibration (Sprint 15.1) ----------
+
+
+@router.get("/calibration")
+def calibration_report(db: Session = Depends(get_db)) -> dict:
+    from ..services.calibration_service import evaluate_calibration
+
+    return evaluate_calibration(db)
+
+
 @router.get("/{experiment_id}")
 def get_experiment_lifecycle(experiment_id: int, db: Session = Depends(get_db)) -> dict:
     experiment = db.get(ContentExperiment, experiment_id)

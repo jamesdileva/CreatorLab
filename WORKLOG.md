@@ -782,3 +782,25 @@ emerging promotion rejected, 404, empty distill without runs). `npm run build`
 OK.
 **Commit:** Sprint 14.2 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 15.1 — Prediction Calibration
+
+**Plan:** Attempt absolute prediction (roadmap 15.1): instead of good/bad,
+predict a probable view RANGE per simulator score, and record whether the
+ranges actually hold so we can decide if absolute forecasting is feasible.
+**Scope:** `calibration_service.py` — least-squares fit (views ≈ slope·score +
+intercept) over observed (score, real views) pairs, residual-σ × 1.28 ≈ 80%
+interval as the range, evaluation with coverage / MAE / MAPE per experiment,
+all aggregates withheld below MIN_SAMPLES=5 (guide §15); degenerate inputs
+handled (<2 samples → zero model, identical scores → flat model, never-negative
+ranges); `GET /api/experiments/calibration`; experiments-page calibration panel
+(model, coverage/MAE/MAPE when sufficient, per-experiment range table).
+**Implement:** service/endpoint/UI + 7 tests.
+**Verify:** `pytest` → **310 passed** (7 new: slope/intercept recovery on exact
+linear data with σ=0, range width grows with residual σ, never-negative bounds,
+coverage 1.0 + MAE 0 on linear data with verdict, insufficient-sample gating
+(None aggregates + gated verdict), endpoint payload shape, identical-scores flat
+model). `npm run build` OK.
+**Commit:** Sprint 15.1 commit + push to `main`.
+

@@ -1,5 +1,6 @@
 from ..services.character_service import CharacterIdentity
 from .audit_status import AuditStatus
+from .audience_lore import AudienceLore
 from .canon import Canon, CanonCategory
 from .concept import Concept, ConceptSet
 from .concept_score import ConceptScore, HumanRanking
@@ -30,6 +31,7 @@ __all__ = [
     "AUDIENCE_VERSION",
     "AssetKind",
     "AuditStatus",
+    "AudienceLore",
     "Canon",
     "CanonCategory",
     "CharacterIdentity",

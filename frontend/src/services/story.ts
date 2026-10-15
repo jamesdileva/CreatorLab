@@ -25,6 +25,35 @@ export const listSeries = (creatorId?: number): Promise<Series[]> =>
 export const getSeries = (id: number): Promise<Series> =>
   req<Series>(`${ROOT}/api/series/${id}`);
 
+// audience lore (Sprint 14.2)
+export interface LoreEntry {
+  id: number;
+  theme: string;
+  creator_id: number;
+  episode_ids: number[];
+  mention_count: number;
+  avg_watch: number;
+  status: string;
+  promoted_canon_id: number | null;
+  first_seen: string;
+  last_seen: string;
+}
+
+export const listLore = (): Promise<LoreEntry[]> =>
+  req<LoreEntry[]>(`${ROOT}/api/audience-lore`);
+
+export const distillLore = (): Promise<LoreEntry[]> =>
+  req<LoreEntry[]>(`${ROOT}/api/audience-lore/distill`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
+export const promoteLore = (loreId: number): Promise<unknown> =>
+  req<unknown>(`${ROOT}/api/audience-lore/${loreId}/promote`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+
 // universe canon (Sprint 14.1)
 export interface UniverseEntity {
   id: number;

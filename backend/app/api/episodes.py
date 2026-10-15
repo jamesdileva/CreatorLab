@@ -799,6 +799,59 @@ def delete_universe_entity(entity_id: int, db: Session = Depends(get_db)) -> Non
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
+# ---------- Audience lore (Sprint 14.2) ----------
+
+
+class LoreRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    theme: str
+    creator_id: int
+    episode_ids: list[int]
+    mention_count: int
+    avg_watch: float
+    status: str
+    promoted_canon_id: int | None
+    first_seen: datetime
+    last_seen: datetime
+
+
+@router.post("/api/audience-lore/distill", response_model=list[LoreRead])
+def distill_audience_lore(db: Session = Depends(get_db)) -> list:
+    from ..services.lore_service import distill_lore
+
+    return distill_lore(db)
+
+
+@router.get("/api/audience-lore", response_model=list[LoreRead])
+def list_audience_lore(db: Session = Depends(get_db)) -> list:
+    from ..models.audience_lore import AudienceLore
+
+    return (
+        db.query(AudienceLore)
+        .order_by(AudienceLore.mention_count.desc(), AudienceLore.id)
+        .all()
+    )
+
+
+@router.post("/api/audience-lore/{lore_id}/promote", response_model=CanonRead)
+def promote_audience_lore(lore_id: int, db: Session = Depends(get_db)) -> Canon:
+    from ..services.lore_service import promote_lore
+
+    try:
+        canon = promote_lore(db, lore_id)
+    except ValueError as exc:
+        message = str(exc)
+        code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in message
+            else status.HTTP_409_CONFLICT
+        )
+        raise HTTPException(status_code=code, detail=message)
+    return canon
+
+
 # ---------- Concept generation (Sprint 3.1) ----------
 
 

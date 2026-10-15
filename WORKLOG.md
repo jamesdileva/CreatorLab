@@ -759,3 +759,26 @@ v1 renders without the universe section while v2 includes it, cross-episode
 universe echo, seed constants cover all six kinds). `npm run build` OK.
 **Commit:** Sprint 14.1 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 14.2 — Audience Lore
+
+**Plan:** Track recurring viewer reactions and let them enter the fictional
+universe (roadmap 14.2, arch §13).
+**Scope:** `AudienceLore` model (theme, creator, episode ids, mention count,
+avg watch, status emerging/recurring/promoted), `lore_service.py` — distill
+recurring bigram themes from episode-level simulation runs whose mean watch is
+above the cohort mean (recurrence across ≥2 distinct episodes; mean chosen over
+median because small cohorts make the median degenerate to the low value),
+`promote_lore` writes the theme into that series' canon as a RUNNING_JOKE
+(idempotent, human-initiated, emerging themes rejected 409), endpoints
+(POST distill / GET list / POST promote), `/lore` UI with promote action.
+**Implement:** model/service/endpoints/UI + 8 tests.
+**Verify:** `pytest` → **303 passed** (8 new: recurring theme found across 3
+episodes with avg watch recorded, single-episode themes stay emerging,
+below-mean-watch episodes create no themes, distill endpoint + listing,
+promotion writes RUNNING_JOKE canon in the right series and is idempotent,
+emerging promotion rejected, 404, empty distill without runs). `npm run build`
+OK.
+**Commit:** Sprint 14.2 commit + push to `main`.
+

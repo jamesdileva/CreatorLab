@@ -120,6 +120,11 @@ def generate_cross_episode(
         c.statement
         for c in db.query(Canon).filter(Canon.series_id == series.id).order_by(Canon.id).all()
     ]
+    # universe canon applies to every channel (roadmap 14.1)
+    from .universe_service import universe_statements
+
+    universe_facts = universe_statements(db)
+
     memories: list[str] = []
     for creator in participants:
         name = creator.name
@@ -181,6 +186,7 @@ def generate_cross_episode(
             user_message="Write the crossover episode now.",
             persona=PersonaHint(name=host.name),
             memories=memories,
+            universe_canon=universe_facts,
             response_format="cross_episode",
             variant=variant,
         )
@@ -194,7 +200,9 @@ def generate_cross_episode(
         ) from exc
 
     known_names = {c.name.lower() for c in participants}
-    evaluation = evaluate_cross_draft(draft, participants, canon, history)
+    evaluation = evaluate_cross_draft(
+        draft, participants, canon + universe_facts, history
+    )
 
     next_number = (
         db.query(func_max(Episode.episode_number))

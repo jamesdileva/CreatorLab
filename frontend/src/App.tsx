@@ -10,6 +10,7 @@ import YouTube from "./pages/YouTube";
 import Analytics from "./pages/Analytics";
 import Experiments, { ExperimentDetail } from "./pages/Experiments";
 import RealityGapDashboard from "./pages/RealityGapDashboard";
+import Universe from "./pages/Universe";
 import Audience from "./pages/Audience";
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
       <Route path="/experiments" element={<Experiments />} />
       <Route path="/experiments/:id" element={<ExperimentDetail />} />
       <Route path="/reality-gap" element={<RealityGapDashboard />} />
+      <Route path="/universe" element={<Universe />} />
       <Route path="/simulation" element={<Audience />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -736,3 +736,26 @@ accounts never interact to manufacture engagement (architecture §4/§20);
 no cross-posting automation exists.
 **Commit:** Sprint 13.2 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 14.1 — Shared Canon (Creator Universe)
+
+**Plan:** Universe-level canon shared by every channel (roadmap 14.1):
+locations/characters/events/objects/relationships/timeline — generation must
+never contradict it, so episodes across creators stay consistent.
+**Scope:** `models/universe.py` (`UniverseEntity`, 6 kinds), universe service +
+8 seeded shared facts (County Fair, Old Red, Seed Library Bus, Toaster Incident,
+Seedling Trades, Old Data Center, Gravel Pit, Season One timeline), universe
+facts injected into solo + cross generation context and the contradiction
+evaluation, **new** `episode_prompt_v2.md` (v1 stays frozen per guide §26 — v1
+still renders unchanged and stays registered; default flipped to v2), stub echo
+of a universe fact in both solo + cross scripts, endpoints in `api/episodes.py`
+(GET/POST/DELETE `/api/universe`), `/universe` page + dashboard link.
+**Implement:** model/service/seeds/prompt v2/stub/endpoints/UI + 7 tests.
+**Verify:** `pytest` → **295 passed** (7 new: universe CRUD + validation,
+two-channel consistency — Hank's and Alex.exe's episodes both echo the shared
+fact with zero `canon_contradiction` flags, prompt version list keeps v1+v2,
+v1 renders without the universe section while v2 includes it, cross-episode
+universe echo, seed constants cover all six kinds). `npm run build` OK.
+**Commit:** Sprint 14.1 commit + push to `main`.
+

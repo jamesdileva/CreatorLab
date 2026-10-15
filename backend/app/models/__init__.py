@@ -21,6 +21,7 @@ from .simulation import (
     ViewerReaction,
 )
 from .story_thread import StoryThread, ThreadStatus
+from .universe import UniverseEntity, UniverseKind
 from .viewer import AUDIENCE_VERSION, SyntheticViewer
 from .video_metrics import VideoMetrics
 from .youtube_account import YouTubeAccount
@@ -58,6 +59,8 @@ __all__ = [
     "SyntheticViewer",
     "TargetType",
     "ThreadStatus",
+    "UniverseEntity",
+    "UniverseKind",
     "VideoMetrics",
     "ViewerReaction",
     "YouTubeAccount",

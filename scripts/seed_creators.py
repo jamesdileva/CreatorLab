@@ -12,10 +12,44 @@ from app.core.database import Base, SessionLocal, engine  # noqa: E402
 from app.models.creator import Creator  # noqa: E402
 from app.models.creator_memory import CreatorMemory, MemoryType  # noqa: E402
 from app.models.relationship import CreatorRelationship  # noqa: E402
+from app.models.universe import UniverseEntity  # noqa: E402
 from app.services.relationship_service import (  # noqa: E402
     apply_story_event,
     get_or_create_relationship,
 )
+from app.services.universe_service import upsert_entity  # noqa: E402
+
+# Universe canon shared by EVERY channel (roadmap 14.1)
+SEED_UNIVERSE: list[tuple[str, str, str]] = [
+    ("LOCATION", "The County Fair", "The CreatorLab County Fair happens every autumn; everyone attends."),
+    ("LOCATION", "The Old Data Center", "Alex.exe's headquarters is the abandoned county data center."),
+    ("LOCATION", "The Gravel Pit", "The demolition arena is a converted gravel pit outside town."),
+    ("OBJECT", "Old Red", "Old Red is Hank's battered but reliable tractor."),
+    ("OBJECT", "The Seed Library Bus", "Willow's community seed library lives in a converted bus."),
+    ("EVENT", "The Toaster Incident", "Crash once jump-started Old Red with a toaster."),
+    ("RELATIONSHIP", "The Seedling Trades", "Willow trades seedlings with Hank for tractor favors."),
+    ("TIMELINE", "Season One", "All first-season episodes happen within one summer."),
+]
+
+
+def upsert_universe(db) -> list[str]:
+    results = []
+    for kind, name, statement in SEED_UNIVERSE:
+        existing = (
+            db.query(UniverseEntity)
+            .filter_by(kind=kind, name=name)
+            .one_or_none()
+        )
+        if existing is None:
+            upsert_entity(db, kind, name, statement)
+            results.append(f"+ universe {kind}: {name}")
+        elif existing.statement != statement:
+            existing.statement = statement
+            db.commit()
+            results.append(f"~ universe {kind}: {name}")
+        else:
+            results.append(f"= universe {kind}: {name}")
+    return results
 
 SAFETY = (
     "Fictional character only; never impersonate real people. "
@@ -274,6 +308,7 @@ def main() -> None:
                 )
         for slug_a, slug_b, dims, note in SEED_RELATIONSHIPS:
             results.append(upsert_relationship(db, slug_a, slug_b, dims, note))
+        results.extend(upsert_universe(db))
         db.commit()
     finally:
         db.close()

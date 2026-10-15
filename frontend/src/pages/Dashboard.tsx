@@ -23,7 +23,8 @@ export default function Dashboard() {
         <Link to="/youtube">YouTube</Link>{" · "}
         <Link to="/analytics">Analytics</Link>{" · "}
         <Link to="/experiments">Experiments</Link>{" · "}
-        <Link to="/reality-gap">Reality gap</Link>
+        <Link to="/reality-gap">Reality gap</Link>{" · "}
+        <Link to="/universe">Universe</Link>
       </nav>
       <p>Episodes, simulation, and reality-gap land in later sprints.</p>
     </main>

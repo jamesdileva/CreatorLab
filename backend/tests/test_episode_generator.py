@@ -176,7 +176,7 @@ def test_generation_persists_episode_and_scenes(client):
 
 def test_generation_records_prompt_and_model(client):
     body = _generate(client, 2).json()
-    assert body["prompt_version"] == "episode_prompt_v1"
+    assert body["prompt_version"] == "episode_prompt_v2"
     assert body["model"] == "stub/deterministic-v1"
     assert body["canon_used"] == CANON
 

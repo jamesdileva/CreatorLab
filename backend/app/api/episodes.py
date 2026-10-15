@@ -49,6 +49,11 @@ from ..services.video_service import (
     reject_episode,
     render_episode_pipeline,
 )
+from ..services.universe_service import (
+    delete_entity,
+    universe_entities,
+    upsert_entity,
+)
 
 router = APIRouter(tags=["story-universe"])
 
@@ -752,6 +757,46 @@ def delete_canon(canon_id: int, db: Session = Depends(get_db)) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="canon not found")
     db.delete(canon)
     db.commit()
+
+
+# ---------- Universe canon (Sprint 14.1) ----------
+
+
+class UniverseIn(BaseModel):
+    kind: str
+    name: str
+    statement: str
+
+
+class UniverseRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    kind: str
+    name: str
+    statement: str
+    created_at: datetime
+
+
+@router.post("/api/universe", status_code=status.HTTP_201_CREATED, response_model=UniverseRead)
+def create_universe_entity(payload: UniverseIn, db: Session = Depends(get_db)):
+    try:
+        return upsert_entity(db, payload.kind, payload.name, payload.statement)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.get("/api/universe", response_model=list[UniverseRead])
+def list_universe(db: Session = Depends(get_db)) -> list:
+    return universe_entities(db)
+
+
+@router.delete("/api/universe/{entity_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_universe_entity(entity_id: int, db: Session = Depends(get_db)) -> None:
+    try:
+        delete_entity(db, entity_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 # ---------- Concept generation (Sprint 3.1) ----------

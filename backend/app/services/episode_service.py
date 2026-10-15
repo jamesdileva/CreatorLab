@@ -67,12 +67,16 @@ def generate_episode(
     variant: int = 0,
 ) -> GenerationResult:
     """Generate + evaluate a draft. Persists unless BLOCKED."""
-    version = prompt_version or "episode_prompt_v1"
+    version = prompt_version or "episode_prompt_v2"
 
     canon_rows = (
         db.query(Canon).filter(Canon.series_id == series.id).order_by(Canon.id).all()
     )
     canon = [c.statement for c in canon_rows]
+    # universe canon applies to every channel (roadmap 14.1)
+    from .universe_service import universe_statements
+
+    universe_facts = universe_statements(db)
 
     memory_rows = retrieve_memories(db, creator.id)
     memories = [m.content for m in memory_rows]
@@ -107,6 +111,7 @@ def generate_episode(
         next_episode_number=next_number,
         json_schema=JSON_SCHEMA,
         variant=variant,
+        universe_facts=universe_facts,
         version=version,
     )
 
@@ -123,6 +128,7 @@ def generate_episode(
             ),
             memories=memories,
             threads=open_threads,
+            universe_canon=universe_facts,
             response_format="json",
             variant=variant,
         )
@@ -135,7 +141,7 @@ def generate_episode(
 
     evaluation = evaluate_draft(
         draft,
-        canon=canon,
+        canon=canon + universe_facts,
         previous_premises=[e.premise for e in history_rows],
         open_threads=open_threads,
     )

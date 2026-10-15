@@ -25,6 +25,31 @@ export const listSeries = (creatorId?: number): Promise<Series[]> =>
 export const getSeries = (id: number): Promise<Series> =>
   req<Series>(`${ROOT}/api/series/${id}`);
 
+// universe canon (Sprint 14.1)
+export interface UniverseEntity {
+  id: number;
+  kind: string;
+  name: string;
+  statement: string;
+  created_at: string;
+}
+
+export const listUniverse = (): Promise<UniverseEntity[]> =>
+  req<UniverseEntity[]>(`${ROOT}/api/universe`);
+
+export const createUniverseEntity = (payload: {
+  kind: string;
+  name: string;
+  statement: string;
+}): Promise<UniverseEntity> =>
+  req<UniverseEntity>(`${ROOT}/api/universe`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const deleteUniverseEntity = (id: number): Promise<void> =>
+  req<void>(`${ROOT}/api/universe/${id}`, { method: "DELETE" });
+
 // cross-creator episodes (Sprint 13.2)
 export interface CrossEpisodeResult {
   episode: Episode;

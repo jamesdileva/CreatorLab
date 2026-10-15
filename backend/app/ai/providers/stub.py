@@ -226,6 +226,8 @@ def _episode_JSON(request: GenerateRequest) -> str:
     ]
     if thread_echo:
         script_lines.append(thread_echo.strip())
+    if request.universe_canon:
+        script_lines.append(f"{name}: Universe fact: {request.universe_canon[0]}")
     script_lines.append("END.")
     draft = {
         "premise": archetype["premise"],
@@ -240,6 +242,7 @@ def _episode_JSON(request: GenerateRequest) -> str:
 def _cross_episode_JSON(request: GenerateRequest) -> str:
     """Deterministic crossover draft; the cast comes from the prompt's list."""
     participants = _prompt_participants(request.system_prompt)
+    universe = request.universe_canon[0] if request.universe_canon else None
     premise = (
         f"{participants[0]} has a problem nobody should solve alone, and "
         f"{participants[1]} insists on helping their way."
@@ -262,6 +265,8 @@ def _cross_episode_JSON(request: GenerateRequest) -> str:
         script_lines.append(f"* {title} — {direction}")
     for name in participants:
         script_lines.append(f"{name}: We're only doing this my way.")
+    if universe:
+        script_lines.append(f"NARRATION: Universe fact: {universe}")
     script_lines.append("END.")
     draft = {
         "participants": participants,

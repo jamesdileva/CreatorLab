@@ -11,6 +11,7 @@ PROMPT_DIR = Path(__file__).parent
 PROMPT_VERSIONS: dict[str, str] = {
     "creator_prompt_v1": "creator_prompt_v1.md",
     "episode_prompt_v1": "episode_prompt_v1.md",
+    "episode_prompt_v2": "episode_prompt_v2.md",
     "concepts_prompt_v1": "concepts_prompt_v1.md",
     "cross_episode_prompt_v1": "cross_episode_prompt_v1.md",
 }
@@ -99,7 +100,8 @@ def render_episode_prompt(
     next_episode_number: int,
     json_schema: str,
     variant: int = 0,
-    version: str = "episode_prompt_v1",
+    universe_facts: list[str] | None = None,
+    version: str = "episode_prompt_v2",
 ) -> str:
     if version not in PROMPT_VERSIONS:
         raise KeyError(f"unknown prompt version: {version}")
@@ -111,6 +113,7 @@ def render_episode_prompt(
         "voice_style": creator.voice_style or "(none)",
         "series_name": series_name,
         "canon_facts": _bullets(canon),
+        "universe_facts": _bullets(universe_facts or []),
         "memories": _bullets(memories),
         "previous_episodes": _bullets(previous_episodes),
         "open_threads": _bullets(open_threads),
@@ -119,6 +122,7 @@ def render_episode_prompt(
         "json_schema": json_schema,
     }
     return _render(_load(PROMPT_VERSIONS[version]), values)
+
 
 def render_cross_episode_prompt(
     cast: list[str],

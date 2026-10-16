@@ -121,6 +121,40 @@ interface HookExperiment {
   verdict: string;
 }
 
+interface LengthExperiment {
+  buckets: string[];
+  min_total: number;
+  min_per_type: number;
+  episodes_considered: number;
+  episodes_without_duration: number;
+  interpretation_allowed: boolean;
+  simulator_note: string;
+  lengths: {
+    episode_id: number;
+    duration_seconds: number;
+    source: string;
+    bucket: string;
+    sim_watch: number | null;
+    real_views: number | null;
+  }[];
+  by_bucket: Record<
+    string,
+    {
+      episodes: number;
+      with_sim: number;
+      with_reality: number;
+      mean_sim_watch: number | null;
+      mean_real_views: number | null;
+      sim_sufficient: boolean;
+      reality_sufficient: boolean;
+    }
+  >;
+  simulation_preferred: string | null;
+  reality_preferred: string | null;
+  agreement: boolean | null;
+  verdict: string;
+}
+
 interface GapDashboard {
   generated_at: string;
   min_samples: number;
@@ -169,6 +203,7 @@ export default function Experiments() {
   const [checkpoint, setCheckpoint] = useState<Checkpoint | null>(null);
   const [calibration, setCalibration] = useState<Calibration | null>(null);
   const [hooks, setHooks] = useState<HookExperiment | null>(null);
+  const [lengths, setLengths] = useState<LengthExperiment | null>(null);
 
   useEffect(() => {
     req<ExperimentRow[]>(`${ROOT}/api/experiments`)
@@ -186,6 +221,9 @@ export default function Experiments() {
     req<HookExperiment>(`${ROOT}/api/experiments/hook-experiment`)
       .then(setHooks)
       .catch(() => setHooks(null));
+    req<LengthExperiment>(`${ROOT}/api/experiments/length-experiment`)
+      .then(setLengths)
+      .catch(() => setLengths(null));
   }, []);
 
   const onCreate = async (e: React.FormEvent) => {
@@ -376,6 +414,65 @@ export default function Experiments() {
         </div>
       ) : (
         <p>hook experiment unavailable</p>
+      )}
+
+      <h2>Episode length experiment (Sprint 16.2)</h2>
+      {lengths ? (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            episodes considered {lengths.episodes_considered} (need ≥
+            {lengths.min_total}) · sim prefers{" "}
+            <strong>{lengths.simulation_preferred ?? "—"}</strong> · reality
+            prefers <strong>{lengths.reality_preferred ?? "—"}</strong> ·{" "}
+            {lengths.agreement === null
+              ? "agreement unknown"
+              : lengths.agreement
+                ? "agreement ✓"
+                : "disagreement ✗"}
+          </p>
+          <p>{lengths.verdict}</p>
+          <p style={{ color: "#666", fontSize: 13 }}>{lengths.simulator_note}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>length</th>
+                <th>episodes</th>
+                <th>mean sim watch</th>
+                <th>mean real views</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lengths.buckets.map((b) => {
+                const row = lengths.by_bucket[b];
+                return (
+                  <tr key={b}>
+                    <td>{b}</td>
+                    <td>
+                      {row.episodes} (sim {row.with_sim}, real{" "}
+                      {row.with_reality})
+                    </td>
+                    <td>
+                      {row.mean_sim_watch ?? "—"}
+                      {row.sim_sufficient ? "" : " (thin)"}
+                    </td>
+                    <td>
+                      {row.mean_real_views ?? "—"}
+                      {row.reality_sufficient ? "" : " (thin)"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {lengths.episodes_without_duration > 0 && (
+            <p style={{ color: "#666", fontSize: 13 }}>
+              {lengths.episodes_without_duration} episode(s) skipped — no
+              measured duration yet.
+            </p>
+          )}
+        </div>
+      ) : (
+        <p>length experiment unavailable</p>
       )}
       <ul>
         {rows.map((r) => (

@@ -101,6 +101,16 @@ def hook_experiment(creator_id: int | None = None, db: Session = Depends(get_db)
     return hook_experiment_report(db, creator_id=creator_id)
 
 
+# ---------- Episode length experiment (Sprint 16.2) ----------
+
+
+@router.get("/length-experiment")
+def length_experiment(creator_id: int | None = None, db: Session = Depends(get_db)) -> dict:
+    from ..services.length_experiment_service import length_experiment_report
+
+    return length_experiment_report(db, creator_id=creator_id)
+
+
 @router.get("/{experiment_id}")
 def get_experiment_lifecycle(experiment_id: int, db: Session = Depends(get_db)) -> dict:
     experiment = db.get(ContentExperiment, experiment_id)

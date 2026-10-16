@@ -854,3 +854,27 @@ matching hook with agreement True, report detects disagreement, gating below
 min total, endpoint shape + `creator_id` filtering). `npm run build` OK.
 **Commit:** Sprint 16.1 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 16.2 — Episode Length Experiment
+
+**Plan:** Content-strategy experiment (roadmap 16.2): test multiple episode
+lengths and determine whether the simulator's preferred length matches reality's.
+**Scope:** `length_experiment_service.py` — measured duration (published video
+first, then latest render; unmeasured episodes counted and skipped) bucketed
+into short (<30s) / medium (30–60s) / long (≥60s); per-bucket aggregation of
+latest simulation watch-mean vs latest real views; `simulation_preferred` /
+`reality_preferred` / `agreement`; interpretation gated below MIN_TOTAL=4 with
+MIN_PER_TYPE=2 flags. Report records an honest `simulator_note`: the reaction
+engine scores hook text + interest only, and the pipeline simulates before a
+render exists, so any length preference is indirect. `GET
+/api/experiments/length-experiment` (optional `creator_id`); Experiments page
+length-experiment panel.
+**Implement:** service/endpoint/UI + 7 tests.
+**Verify:** `pytest` → **333 passed** (7 new: bucket boundaries, duration source
+preference published>render and unknown when neither, report prefers matching
+length with agreement True, disagreement detection, gating + unknown-duration
+count, simulator-note present, endpoint shape + `creator_id` filtering).
+`npm run build` OK.
+**Commit:** Sprint 16.2 commit + push to `main`.
+

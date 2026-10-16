@@ -91,6 +91,16 @@ def calibration_report(db: Session = Depends(get_db)) -> dict:
     return evaluate_calibration(db)
 
 
+# ---------- Hook experiment (Sprint 16.1) ----------
+
+
+@router.get("/hook-experiment")
+def hook_experiment(creator_id: int | None = None, db: Session = Depends(get_db)) -> dict:
+    from ..services.hook_experiment_service import hook_experiment_report
+
+    return hook_experiment_report(db, creator_id=creator_id)
+
+
 @router.get("/{experiment_id}")
 def get_experiment_lifecycle(experiment_id: int, db: Session = Depends(get_db)) -> dict:
     experiment = db.get(ContentExperiment, experiment_id)

@@ -829,3 +829,28 @@ zero-early skipped, video without ≥24h reading skipped, early reading nearest
 sample gating, endpoint shape + `early_views` prediction). `npm run build` OK.
 **Commit:** Sprint 15.2 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 16.1 — Hook Experiment
+
+**Plan:** Content-strategy experiment (roadmap 16.1): test the four hook types
+(direct / question / absurd / character) and check whether the simulator and the
+real audience agree on which hook performs best.
+**Scope:** `hook_experiment_service.py` — deterministic `classify_hook` with a
+documented priority (question → character → absurd → direct) over the episode
+hook text (first sentence of the synopsis, the same text the reaction engine
+uses as the episode hook, falling back to premise then title); per-type
+aggregation of latest simulation watch-mean and latest real views across
+episodes; `simulation_preferred` / `reality_preferred` / `agreement`; all
+interpretation gated below MIN_TOTAL=4 with MIN_PER_TYPE=2 sufficiency flags
+(guide §15). `GET /api/experiments/hook-experiment` (optional `creator_id`);
+Experiments page hook-experiment panel (per-type sim vs reality table,
+preferred hooks, agreement badge).
+**Implement:** service/endpoint/UI + 7 tests.
+**Verify:** `pytest` → **326 passed** (7 new: classification of each type incl.
+empty/None, priority question-over-absurd and character-over-absurd,
+first-sentence hook extraction with premise fallback, report prefers the
+matching hook with agreement True, report detects disagreement, gating below
+min total, endpoint shape + `creator_id` filtering). `npm run build` OK.
+**Commit:** Sprint 16.1 commit + push to `main`.
+

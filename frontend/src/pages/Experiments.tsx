@@ -90,6 +90,37 @@ interface Calibration {
   verdict: string;
 }
 
+interface HookExperiment {
+  hook_types: string[];
+  min_total: number;
+  min_per_type: number;
+  episodes_considered: number;
+  interpretation_allowed: boolean;
+  hooks: {
+    episode_id: number;
+    hook: string;
+    hook_type: string;
+    sim_watch: number | null;
+    real_views: number | null;
+  }[];
+  by_type: Record<
+    string,
+    {
+      episodes: number;
+      with_sim: number;
+      with_reality: number;
+      mean_sim_watch: number | null;
+      mean_real_views: number | null;
+      sim_sufficient: boolean;
+      reality_sufficient: boolean;
+    }
+  >;
+  simulation_preferred: string | null;
+  reality_preferred: string | null;
+  agreement: boolean | null;
+  verdict: string;
+}
+
 interface GapDashboard {
   generated_at: string;
   min_samples: number;
@@ -137,6 +168,7 @@ export default function Experiments() {
   const [dashboard, setDashboard] = useState<GapDashboard | null>(null);
   const [checkpoint, setCheckpoint] = useState<Checkpoint | null>(null);
   const [calibration, setCalibration] = useState<Calibration | null>(null);
+  const [hooks, setHooks] = useState<HookExperiment | null>(null);
 
   useEffect(() => {
     req<ExperimentRow[]>(`${ROOT}/api/experiments`)
@@ -151,6 +183,9 @@ export default function Experiments() {
     req<Calibration>(`${ROOT}/api/experiments/calibration`)
       .then(setCalibration)
       .catch(() => setCalibration(null));
+    req<HookExperiment>(`${ROOT}/api/experiments/hook-experiment`)
+      .then(setHooks)
+      .catch(() => setHooks(null));
   }, []);
 
   const onCreate = async (e: React.FormEvent) => {
@@ -290,6 +325,57 @@ export default function Experiments() {
         </div>
       ) : (
         <p>calibration unavailable</p>
+      )}
+
+      <h2>Hook experiment (Sprint 16.1)</h2>
+      {hooks ? (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            episodes considered {hooks.episodes_considered} (need ≥
+            {hooks.min_total}) · sim prefers{" "}
+            <strong>{hooks.simulation_preferred ?? "—"}</strong> · reality prefers{" "}
+            <strong>{hooks.reality_preferred ?? "—"}</strong> ·{" "}
+            {hooks.agreement === null
+              ? "agreement unknown"
+              : hooks.agreement
+                ? "agreement ✓"
+                : "disagreement ✗"}
+          </p>
+          <p>{hooks.verdict}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>hook type</th>
+                <th>episodes</th>
+                <th>mean sim watch</th>
+                <th>mean real views</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hooks.hook_types.map((t) => {
+                const b = hooks.by_type[t];
+                return (
+                  <tr key={t}>
+                    <td>{t}</td>
+                    <td>
+                      {b.episodes} (sim {b.with_sim}, real {b.with_reality})
+                    </td>
+                    <td>
+                      {b.mean_sim_watch ?? "—"}
+                      {b.sim_sufficient ? "" : " (thin)"}
+                    </td>
+                    <td>
+                      {b.mean_real_views ?? "—"}
+                      {b.reality_sufficient ? "" : " (thin)"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p>hook experiment unavailable</p>
       )}
       <ul>
         {rows.map((r) => (

@@ -804,3 +804,28 @@ coverage 1.0 + MAE 0 on linear data with verdict, insufficient-sample gating
 model). `npm run build` OK.
 **Commit:** Sprint 15.1 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 15.2 — Early Performance Forecasting
+
+**Plan:** Estimate 24h performance from the first hour (roadmap 15.2), then
+compare the 1h-based prediction against the realized 24h result.
+**Scope:** `forecast_service.py` — pair each published video's snapshot closest
+to 1h with the first snapshot ≥24h (using the append-only `VideoMetrics`
+ladder), learn the growth factor (views_24h ≈ factor · views_1h) as the mean of
+observed ratios with ratio-σ spread, predict a range (factor ± 1.28σ) that
+scales with early views, and evaluate coverage / MAE / MAPE per video; all
+aggregates withheld below MIN_SAMPLES=5 (guide §15). Degenerate inputs handled
+(zero early views skipped, videos lacking a ≥24h reading skipped, single
+snapshot can't self-pair, prediction never negative). `GET
+/api/youtube/analytics/forecast` (optional `early_views` for on-demand
+prediction); Analytics page forecast panel with model/coverage and a per-video
+observed-vs-range table.
+**Implement:** service/endpoint/UI + 9 tests.
+**Verify:** `pytest` → **319 passed** (9 new: factor recovery on consistent
+growth with σ=0, prediction scaling + zero-early, range widens with factor σ,
+zero-early skipped, video without ≥24h reading skipped, early reading nearest
+1h chosen among 15m/1h/24h, coverage 1.0 + MAE 0 with verdict, insufficient-
+sample gating, endpoint shape + `early_views` prediction). `npm run build` OK.
+**Commit:** Sprint 15.2 commit + push to `main`.
+

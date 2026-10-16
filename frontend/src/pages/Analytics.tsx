@@ -25,10 +25,37 @@ interface Snapshot {
   subscribers_gained: number;
 }
 
+interface Forecast {
+  min_samples: number;
+  samples: number;
+  interpretation_allowed: boolean;
+  model: { factor: number; factor_std: number; form: string };
+  coverage: number | null;
+  mae: number | null;
+  mape: number | null;
+  forecasts: {
+    published_video_id: number;
+    early_hours: number;
+    early_views: number;
+    actual_24h_views: number;
+    predicted: { point: number; low: number; high: number };
+    within_range: boolean;
+  }[];
+  verdict: string;
+  prediction_for_early_views?: {
+    early_views: number;
+    point: number;
+    low: number;
+    high: number;
+  };
+}
+
 export default function Analytics() {
   const [videos, setVideos] = useState<PublishedVideoSummary[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [history, setHistory] = useState<Snapshot[]>([]);
+  const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [earlyViews, setEarlyViews] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -36,7 +63,24 @@ export default function Analytics() {
       .then((r) => r.json())
       .then(setVideos)
       .catch(() => setVideos([]));
+    fetch(`${ROOT}/api/youtube/analytics/forecast`)
+      .then((r) => r.json())
+      .then(setForecast)
+      .catch(() => setForecast(null));
   }, []);
+
+  const predictFromEarly = async () => {
+    try {
+      const res = await fetch(
+        `${ROOT}/api/youtube/analytics/forecast?early_views=${encodeURIComponent(earlyViews)}`
+      );
+      if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+      setForecast(await res.json());
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "forecast failed");
+    }
+  };
 
   const openHistory = (id: number) => {
     setSelected(id);
@@ -128,6 +172,76 @@ export default function Analytics() {
             </table>
           )}
         </>
+      )}
+
+      <h2>Early performance forecast — 1h → 24h (Sprint 15.2)</h2>
+      {forecast ? (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            samples {forecast.samples} (need ≥{forecast.min_samples}) ·{" "}
+            {forecast.model.form.replace("factor", forecast.model.factor.toString())}{" "}
+            · factor σ {forecast.model.factor_std}
+          </p>
+          {forecast.interpretation_allowed ? (
+            <p>
+              range coverage {(forecast.coverage! * 100).toFixed(1)}% · MAE{" "}
+              {forecast.mae} · MAPE{" "}
+              {forecast.mape !== null
+                ? `${(forecast.mape * 100).toFixed(1)}%`
+                : "—"}{" "}
+              — {forecast.verdict}
+            </p>
+          ) : (
+            <p>Insufficient videos with both a ~1h and a ≥24h reading.</p>
+          )}
+          <p>
+            predict from first hour:{" "}
+            <input
+              value={earlyViews}
+              onChange={(e) => setEarlyViews(e.target.value)}
+              placeholder="views at 1h"
+              style={{ width: 100 }}
+            />{" "}
+            <button onClick={() => void predictFromEarly()}>forecast 24h</button>
+            {forecast.prediction_for_early_views && (
+              <span>
+                {" "}
+                → {forecast.prediction_for_early_views.low}–
+                {forecast.prediction_for_early_views.high} views (point{" "}
+                {forecast.prediction_for_early_views.point})
+              </span>
+            )}
+          </p>
+          {forecast.forecasts.length > 0 && (
+            <table>
+              <thead>
+                <tr>
+                  <th>video</th>
+                  <th>1h views</th>
+                  <th>actual 24h</th>
+                  <th>predicted range</th>
+                  <th>in range</th>
+                </tr>
+              </thead>
+              <tbody>
+                {forecast.forecasts.map((f) => (
+                  <tr key={f.published_video_id}>
+                    <td>#{f.published_video_id}</td>
+                    <td>{f.early_views}</td>
+                    <td>{f.actual_24h_views}</td>
+                    <td>
+                      {f.predicted.low}–{f.predicted.high} (point{" "}
+                      {f.predicted.point})
+                    </td>
+                    <td>{f.within_range ? "yes" : "no"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : (
+        <p>forecast unavailable</p>
       )}
     </main>
   );

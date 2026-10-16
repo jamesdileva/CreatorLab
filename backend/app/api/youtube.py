@@ -246,6 +246,25 @@ def analytics_due(db: Session = Depends(get_db)) -> list[int]:
     return due_videos(db)
 
 
+# ---------- Early performance forecasting (Sprint 15.2) ----------
+
+
+@router.get("/analytics/forecast")
+def analytics_forecast(
+    early_views: float | None = None, db: Session = Depends(get_db)
+) -> dict:
+    from ..services.forecast_service import evaluate_forecast, fit_forecast
+
+    report = evaluate_forecast(db)
+    if early_views is not None:
+        model, _ = fit_forecast(db)
+        report["prediction_for_early_views"] = {
+            "early_views": early_views,
+            **model.predict(early_views),
+        }
+    return report
+
+
 @router.get("/videos", response_model=list[PublishedRead])
 def list_published(db: Session = Depends(get_db)) -> list:
     return db.query(PublishedVideo).order_by(PublishedVideo.id.desc()).all()

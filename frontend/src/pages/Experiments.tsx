@@ -155,6 +155,40 @@ interface LengthExperiment {
   verdict: string;
 }
 
+interface StoryVsMeme {
+  formats: string[];
+  series_story_min: number;
+  min_total: number;
+  min_per_format: number;
+  episodes_considered: number;
+  episodes_skipped: number;
+  interpretation_allowed: boolean;
+  analytics_note: string;
+  episodes: {
+    episode_id: number;
+    series_id: number;
+    format: string;
+    series_size: number;
+    views: number;
+    subscribers_gained: number;
+    subscriber_conversion: number | null;
+  }[];
+  by_format: Record<
+    string,
+    {
+      episodes: number;
+      total_views: number;
+      total_subscribers_gained: number;
+      mean_views: number | null;
+      mean_subscribers_gained: number | null;
+      subscriber_conversion: number | null;
+      sufficient: boolean;
+    }
+  >;
+  higher_subscriber_conversion: string | null;
+  verdict: string;
+}
+
 interface GapDashboard {
   generated_at: string;
   min_samples: number;
@@ -204,6 +238,7 @@ export default function Experiments() {
   const [calibration, setCalibration] = useState<Calibration | null>(null);
   const [hooks, setHooks] = useState<HookExperiment | null>(null);
   const [lengths, setLengths] = useState<LengthExperiment | null>(null);
+  const [svMeme, setSvMeme] = useState<StoryVsMeme | null>(null);
 
   useEffect(() => {
     req<ExperimentRow[]>(`${ROOT}/api/experiments`)
@@ -224,6 +259,9 @@ export default function Experiments() {
     req<LengthExperiment>(`${ROOT}/api/experiments/length-experiment`)
       .then(setLengths)
       .catch(() => setLengths(null));
+    req<StoryVsMeme>(`${ROOT}/api/experiments/story-vs-meme`)
+      .then(setSvMeme)
+      .catch(() => setSvMeme(null));
   }, []);
 
   const onCreate = async (e: React.FormEvent) => {
@@ -473,6 +511,59 @@ export default function Experiments() {
         </div>
       ) : (
         <p>length experiment unavailable</p>
+      )}
+
+      <h2>Story vs meme (Sprint 16.3)</h2>
+      {svMeme ? (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            episodes considered {svMeme.episodes_considered} (need ≥
+            {svMeme.min_total}) · higher subscriber conversion:{" "}
+            <strong>{svMeme.higher_subscriber_conversion ?? "—"}</strong>
+          </p>
+          <p>{svMeme.verdict}</p>
+          <p style={{ color: "#666", fontSize: 13 }}>{svMeme.analytics_note}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>format</th>
+                <th>episodes</th>
+                <th>mean views</th>
+                <th>mean subs gained</th>
+                <th>sub conversion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {svMeme.formats.map((f) => {
+                const row = svMeme.by_format[f];
+                return (
+                  <tr key={f}>
+                    <td>{f}</td>
+                    <td>
+                      {row.episodes}
+                      {row.sufficient ? "" : " (thin)"}
+                    </td>
+                    <td>{row.mean_views ?? "—"}</td>
+                    <td>{row.mean_subscribers_gained ?? "—"}</td>
+                    <td>
+                      {row.subscriber_conversion !== null
+                        ? `${(row.subscriber_conversion * 100).toFixed(2)}%`
+                        : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {svMeme.episodes_skipped > 0 && (
+            <p style={{ color: "#666", fontSize: 13 }}>
+              {svMeme.episodes_skipped} episode(s) skipped — no published
+              metrics yet.
+            </p>
+          )}
+        </div>
+      ) : (
+        <p>story vs meme experiment unavailable</p>
       )}
       <ul>
         {rows.map((r) => (

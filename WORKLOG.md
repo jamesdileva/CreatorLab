@@ -878,3 +878,27 @@ count, simulator-note present, endpoint shape + `creator_id` filtering).
 `npm run build` OK.
 **Commit:** Sprint 16.2 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 16.3 — Story vs Meme
+
+**Plan:** Content-strategy experiment (roadmap 16.3): compare standalone meme
+vs episodic story — does persistent storytelling produce stronger subscriber /
+returning-viewer behavior than disposable jokes?
+**Scope:** `story_vs_meme_service.py` — serialization classifier (series with
+≥2 episodes = story, one-off series = meme); per-episode real behavior from the
+latest published video (latest views + summed `subscribers_gained` across its
+append-only snapshots); per-format aggregates including `subscriber_conversion`
+(subs gained / views) as the practical returning-audience proxy, with an
+explicit `analytics_note` that true returning/retention data needs the YouTube
+Analytics API (guide §14); higher-conversion format named only when strictly
+better, interpretation gated below MIN_TOTAL=4 and MIN_PER_FORMAT=2.
+`GET /api/experiments/story-vs-meme` (optional `creator_id`); Experiments page
+story-vs-meme panel.
+**Implement:** service/endpoint/UI + 6 tests.
+**Verify:** `pytest` → **339 passed** (6 new: series-size classification, story
+wins on conversion, meme wins on conversion, gating below min total, episode
+rows + skip counting (orphan series and never-published episodes), endpoint
+shape + `creator_id` filtering). `npm run build` OK.
+**Commit:** Sprint 16.3 commit + push to `main`.
+

@@ -111,6 +111,16 @@ def length_experiment(creator_id: int | None = None, db: Session = Depends(get_d
     return length_experiment_report(db, creator_id=creator_id)
 
 
+# ---------- Story vs meme (Sprint 16.3) ----------
+
+
+@router.get("/story-vs-meme")
+def story_vs_meme(creator_id: int | None = None, db: Session = Depends(get_db)) -> dict:
+    from ..services.story_vs_meme_service import story_vs_meme_report
+
+    return story_vs_meme_report(db, creator_id=creator_id)
+
+
 @router.get("/{experiment_id}")
 def get_experiment_lifecycle(experiment_id: int, db: Session = Depends(get_db)) -> dict:
     experiment = db.get(ContentExperiment, experiment_id)

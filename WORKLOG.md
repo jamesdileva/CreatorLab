@@ -930,3 +930,31 @@ diverging from both judges, exclusion of candidates missing any judge with
 POST 201 + 400 + comparison shape). `npm run build` OK.
 **Commit:** Sprint 17.1 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 17.2 — Simulation Failure Analysis
+
+**Plan:** Build a catalog of simulation weaknesses (roadmap 17.2): categorize
+each simulator failure so the project can see where the model is systematically
+wrong.
+**Scope:** `failure_catalog.py` — consumes stored `reality_gap.rank_deltas`
+(pos_sim − pos_real) per experiment; direction from the delta sign (negative =
+overestimated, positive = underestimated); a documented priority classifier over
+auditable signals — hook type (reused `hook_experiment_service`), length bucket
+(reused `length_experiment_service`), explicit marker vocabularies (irony,
+cringe, niche, controversy, humor), and the simulation's own reason codes — into
+the roadmap categories (missed_irony, missed_cringe, missed_humor,
+misread_niche_humor, overestimated_controversy,
+underestimated_character_attachment, misread_pacing) plus
+overestimated_reach / underestimated_reach fallbacks; every row keeps its
+evidence; aggregates into a weakness-ranked catalog with examples, gated below
+MIN_FAILURES=3. `GET /api/experiments/failure-catalog` (optional `creator_id`);
+Experiments page failure-catalog panel.
+**Implement:** service/endpoint/UI + 7 tests.
+**Verify:** `pytest` → **353 passed** (7 new: full classifier rule table, humor
+matched is not counted as a miss, catalog grouping + weakness ranking, reason
+codes and length-bucket classification, gating below min, zero-delta and
+other-creator exclusion, endpoint shape + `creator_id` filter). `npm run build`
+OK.
+**Commit:** Sprint 17.2 commit + push to `main`.
+

@@ -223,6 +223,35 @@ interface JudgeComparison {
   verdict: string;
 }
 
+interface FailureCatalog {
+  categories: string[];
+  min_failures: number;
+  failures_considered: number;
+  interpretation_allowed: boolean;
+  failures: {
+    experiment_id: number;
+    episode_id: number;
+    direction: string;
+    rank_delta: number;
+    magnitude: number;
+    category: string;
+    hook_type: string;
+    length_bucket: string | null;
+    reason_codes: string[];
+  }[];
+  catalog: Record<
+    string,
+    {
+      count: number;
+      over: number;
+      under: number;
+      examples: { experiment_id: number; episode_id: number; rank_delta: number }[];
+    }
+  >;
+  weakness_rank: { category: string; count: number }[];
+  verdict: string;
+}
+
 interface GapDashboard {
   generated_at: string;
   min_samples: number;
@@ -275,6 +304,7 @@ export default function Experiments() {
   const [svMeme, setSvMeme] = useState<StoryVsMeme | null>(null);
   const [judges, setJudges] = useState<JudgeComparison | null>(null);
   const [panelOrder, setPanelOrder] = useState("");
+  const [failures, setFailures] = useState<FailureCatalog | null>(null);
 
   useEffect(() => {
     req<ExperimentRow[]>(`${ROOT}/api/experiments`)
@@ -308,6 +338,9 @@ export default function Experiments() {
 
   useEffect(() => {
     loadJudges();
+    req<FailureCatalog>(`${ROOT}/api/experiments/failure-catalog`)
+      .then(setFailures)
+      .catch(() => setFailures(null));
   }, []);
 
   const recordPanel = async (e: React.FormEvent) => {
@@ -681,6 +714,45 @@ export default function Experiments() {
         </div>
       ) : (
         <p>judge comparison unavailable</p>
+      )}
+
+      <h2>Simulation failure catalog (Sprint 17.2)</h2>
+      {failures ? (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            failures considered {failures.failures_considered} (need ≥
+            {failures.min_failures}) · {failures.verdict}
+          </p>
+          {failures.weakness_rank.length > 0 && (
+            <table>
+              <thead>
+                <tr>
+                  <th>weakness</th>
+                  <th>cases</th>
+                  <th>over / under</th>
+                  <th>example episodes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {failures.weakness_rank.map((w) => {
+                  const c = failures.catalog[w.category];
+                  return (
+                    <tr key={w.category}>
+                      <td>{w.category.replace(/_/g, " ")}</td>
+                      <td>{c.count}</td>
+                      <td>
+                        {c.over} / {c.under}
+                      </td>
+                      <td>{c.examples.map((e) => `#${e.episode_id}`).join(", ")}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : (
+        <p>failure catalog unavailable</p>
       )}
       <ul>
         {rows.map((r) => (

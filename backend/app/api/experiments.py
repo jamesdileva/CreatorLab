@@ -161,6 +161,16 @@ def judge_comparison(series_id: int | None = None, db: Session = Depends(get_db)
     return compare(db, series_id=series_id)
 
 
+# ---------- Simulation failure catalog (Sprint 17.2) ----------
+
+
+@router.get("/failure-catalog")
+def failure_catalog(creator_id: int | None = None, db: Session = Depends(get_db)) -> dict:
+    from ..services.failure_catalog import failure_catalog as build_catalog
+
+    return build_catalog(db, creator_id=creator_id)
+
+
 @router.get("/{experiment_id}")
 def get_experiment_lifecycle(experiment_id: int, db: Session = Depends(get_db)) -> dict:
     experiment = db.get(ContentExperiment, experiment_id)

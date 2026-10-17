@@ -121,6 +121,46 @@ def story_vs_meme(creator_id: int | None = None, db: Session = Depends(get_db)) 
     return story_vs_meme_report(db, creator_id=creator_id)
 
 
+# ---------- Simulation vs human baseline (Sprint 17.1) ----------
+
+
+class HumanPanelIn(BaseModel):
+    candidate_type: str
+    order: list[int]
+    note: str = ""
+
+
+class HumanPanelRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    candidate_type: str
+    order: list[int]
+    note: str
+    created_at: datetime
+
+
+@router.post(
+    "/human-panel",
+    status_code=status.HTTP_201_CREATED,
+    response_model=HumanPanelRead,
+)
+def create_human_panel(payload: HumanPanelIn, db: Session = Depends(get_db)):
+    from ..services.human_baseline import PanelError, record_panel_ranking
+
+    try:
+        return record_panel_ranking(db, payload.candidate_type, payload.order, payload.note)
+    except PanelError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.get("/judge-comparison")
+def judge_comparison(series_id: int | None = None, db: Session = Depends(get_db)) -> dict:
+    from ..services.human_baseline import judge_comparison as compare
+
+    return compare(db, series_id=series_id)
+
+
 @router.get("/{experiment_id}")
 def get_experiment_lifecycle(experiment_id: int, db: Session = Depends(get_db)) -> dict:
     experiment = db.get(ContentExperiment, experiment_id)

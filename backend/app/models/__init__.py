@@ -8,6 +8,7 @@ from .creator import Creator
 from .creator_memory import CreatorMemory, MemoryType
 from .episode import Episode, EpisodeStatus
 from .experiment import ContentExperiment
+from .human_panel import HumanPanelRanking
 from .published_video import PublishedVideo
 from .relationship import CreatorRelationship, RelationshipEvent
 from .render import AssetKind, Render, RenderStatus
@@ -43,6 +44,7 @@ __all__ = [
     "CreatorMemory",
     "Episode",
     "EpisodeStatus",
+    "HumanPanelRanking",
     "HumanRanking",
     "MemoryType",
     "PublishedVideo",

@@ -189,6 +189,40 @@ interface StoryVsMeme {
   verdict: string;
 }
 
+interface JudgeComparison {
+  min_candidates: number;
+  panel_rankings_recorded: number;
+  panel_note: string;
+  candidates: number;
+  interpretation_allowed: boolean;
+  resembles_threshold: number;
+  candidates_scored: {
+    episode_id: number;
+    sim_watch: number | null;
+    human_position: number | null;
+    real_views: number | null;
+    judged_by_all_three: boolean;
+  }[];
+  orders: {
+    synthetic?: number[];
+    human?: number[];
+    reality?: number[];
+    candidate_ids?: number[];
+  };
+  pairs: Record<
+    string,
+    {
+      top_1_match: boolean;
+      top_3_overlap: number;
+      directional_accuracy: number;
+      spearman: number;
+      kendall_tau: number;
+      candidates: number;
+    }
+  >;
+  verdict: string;
+}
+
 interface GapDashboard {
   generated_at: string;
   min_samples: number;
@@ -239,6 +273,8 @@ export default function Experiments() {
   const [hooks, setHooks] = useState<HookExperiment | null>(null);
   const [lengths, setLengths] = useState<LengthExperiment | null>(null);
   const [svMeme, setSvMeme] = useState<StoryVsMeme | null>(null);
+  const [judges, setJudges] = useState<JudgeComparison | null>(null);
+  const [panelOrder, setPanelOrder] = useState("");
 
   useEffect(() => {
     req<ExperimentRow[]>(`${ROOT}/api/experiments`)
@@ -263,6 +299,37 @@ export default function Experiments() {
       .then(setSvMeme)
       .catch(() => setSvMeme(null));
   }, []);
+
+  const loadJudges = () => {
+    req<JudgeComparison>(`${ROOT}/api/experiments/judge-comparison`)
+      .then(setJudges)
+      .catch(() => setJudges(null));
+  };
+
+  useEffect(() => {
+    loadJudges();
+  }, []);
+
+  const recordPanel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const order = panelOrder
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isFinite(n));
+      const res = await fetch(`${ROOT}/api/experiments/human-panel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate_type: "episode", order }),
+      });
+      if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+      setPanelOrder("");
+      setError("");
+      loadJudges();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "panel ranking failed");
+    }
+  };
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -564,6 +631,56 @@ export default function Experiments() {
         </div>
       ) : (
         <p>story vs meme experiment unavailable</p>
+      )}
+
+      <h2>Simulation vs human baseline (Sprint 17.1)</h2>
+      {judges ? (
+        <div style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12 }}>
+          <p>
+            candidates judged by all three: {judges.candidates} (need ≥
+            {judges.min_candidates}) · {judges.verdict}
+          </p>
+          <form onSubmit={recordPanel}>
+            <input
+              value={panelOrder}
+              onChange={(e) => setPanelOrder(e.target.value)}
+              placeholder="episode ids, best first: 12, 7, 3"
+              style={{ width: 260 }}
+            />{" "}
+            <button type="submit">record panel ranking</button>
+          </form>
+          {Object.entries(judges.pairs).length > 0 && (
+            <table>
+              <thead>
+                <tr>
+                  <th>pair</th>
+                  <th>top-1</th>
+                  <th>directional</th>
+                  <th>spearman</th>
+                  <th>kendall τ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(judges.pairs).map(([name, p]) => (
+                  <tr key={name}>
+                    <td>{name.replace(/_/g, " ")}</td>
+                    <td>{p.top_1_match ? "✓" : "✗"}</td>
+                    <td>
+                      {p.directional_accuracy}
+                      {p.directional_accuracy >= judges.resembles_threshold
+                        ? ""
+                        : " (below)"}
+                    </td>
+                    <td>{p.spearman}</td>
+                    <td>{p.kendall_tau}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : (
+        <p>judge comparison unavailable</p>
       )}
       <ul>
         {rows.map((r) => (

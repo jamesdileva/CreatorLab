@@ -902,3 +902,31 @@ rows + skip counting (orphan series and never-published episodes), endpoint
 shape + `creator_id` filtering). `npm run build` OK.
 **Commit:** Sprint 16.3 commit + push to `main`.
 
+---
+
+## 2026-10-14 — Sprint 17.1 — Human Judges
+
+**Plan:** Simulation vs human baseline (roadmap 17.1): a human panel ranks the
+same candidate videos as the synthetic audience and the real YouTube audience,
+then compare all three pairwise — end goal: does the simulator resemble human
+judgment?
+**Scope:** `HumanPanelRanking` model (candidate_type, best-first JSON order,
+note); `human_baseline.py` — validated panel recording (≥2 unique, existing
+episode ids only), and a three-way comparison restricted to candidates that all
+three judges scored (stored simulation watch mean, human panel position, latest
+real views) so every pair covers the same items; per-pair top-1 / top-3 /
+directional / Spearman / Kendall τ via `core.metrics`; verdict that separately
+states whether the simulator resembles human judgment and/or the real audience,
+gated below MIN_CANDIDATES=5 (resemblance = directional ≥ 0.6).
+`POST`/`GET /api/experiments/human-panel` + `GET /api/experiments/judge-comparison`
+(optional `series_id`); Experiments page panel to record a ranking and view the
+three-way table.
+**Implement:** model/service/endpoints/UI + 7 tests.
+**Verify:** `pytest` → **346 passed** (7 new: panel-recording validation for
+wrong type/short/unknown/duplicate orders, persistence, full agreement gives
+1.0 directional + Spearman with the "resembles both" verdict, simulator
+diverging from both judges, exclusion of candidates missing any judge with
+`judged_by_all_three` flags and gating, `series_id` filter, endpoint flow
+POST 201 + 400 + comparison shape). `npm run build` OK.
+**Commit:** Sprint 17.1 commit + push to `main`.
+

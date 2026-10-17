@@ -958,3 +958,26 @@ other-creator exclusion, endpoint shape + `creator_id` filter). `npm run build`
 OK.
 **Commit:** Sprint 17.2 commit + push to `main`.
 
+---
+
+## 2026-10-16 — Sprint 18.1 — TikTok Feasibility
+
+**Plan:** Roadmap §18.1 — research TikTok API access and publishing requirements;
+determine whether CreatorLab has a legitimate publishing path; no engineering
+until platform access is confirmed.
+**Scope:** research + a written determination (`docs/tiktok-feasibility.md`); no
+application code.
+**Implement:** documented TikTok's official Content Posting API modes — inbox
+draft `MEDIA_UPLOAD` (`video.upload`, no audit, public after human publishes) vs
+Direct Post (`video.publish`, unaudited → `SELF_ONLY` + 5-creator/24h cap, public
+only after audit); ~15 posts/24h/creator cap; `PULL_FROM_URL` domain
+verification; mandatory AIGC labeling (`is_aigc`) for our synthetic creators; and
+boundary alignment (per-post human consent is required by TikTok's own guidelines
+and forbidden to auto-post, matching our hard boundary). Listed every account /
+app / domain / hosted-policy blocker and recorded the gate.
+**Verify:** Determination — **GO with a mandatory human-publish path**: MVP uses
+inbox draft (`MEDIA_UPLOAD`) + human publish (no audit, public, boundary-safe);
+automated Direct Post is future work gated on the audit. No TikTok code written
+(§18.1 end goal); Sprint 18.2 remains gated.
+**Commit:** Sprint 18.1 commit + push to `main`.
+

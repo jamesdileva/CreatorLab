@@ -10,6 +10,7 @@ import {
   getProfile,
   listAccounts,
   recordView,
+  runAgent,
   syncCreatorAccounts,
 } from "../services/emulator";
 import type {
@@ -17,6 +18,7 @@ import type {
   EmulatorPost,
   EmulatorPostDetail,
   EmulatorProfile,
+  AgentSession,
 } from "../services/emulator";
 
 export default function Emulator() {
@@ -33,6 +35,8 @@ export default function Emulator() {
   const [caption, setCaption] = useState("");
   const [commentBody, setCommentBody] = useState("");
   const [followTarget, setFollowTarget] = useState("");
+  const [agentGoal, setAgentGoal] = useState("Explore the feed and engage naturally.");
+  const [agentRun, setAgentRun] = useState<AgentSession | null>(null);
 
   const loadAccounts = () =>
     listAccounts()
@@ -129,6 +133,16 @@ export default function Emulator() {
     run(async () => {
       setProfile(await getProfile(handle));
     });
+
+  const onRunAgent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!active) return;
+    void run(async () => {
+      const session = await runAgent(active, agentGoal);
+      setAgentRun(session);
+      await loadFeed(active);
+    });
+  };
 
   return (
     <main style={{ fontFamily: "system-ui", padding: 24, maxWidth: 900 }}>
@@ -282,6 +296,48 @@ export default function Emulator() {
           <button onClick={() => setProfile(null)}>close profile</button>
         </section>
       )}
+
+      <section style={{ border: "1px solid #333", borderRadius: 8, padding: 12, marginTop: 12 }}>
+        <h2>Visual/social agent (Sprint 20.2)</h2>
+        <p style={{ fontSize: 12, color: "#555" }}>
+          An agent perceives the emulator as a rendered screen and acts one step
+          at a time (open → watch → read → comment → navigate). Runs on the
+          configured provider (stub or a local Ollama model) — separate from any
+          real platform.
+        </p>
+        <form onSubmit={onRunAgent}>
+          <input
+            style={{ width: "60%" }}
+            placeholder="agent goal"
+            value={agentGoal}
+            onChange={(e) => setAgentGoal(e.target.value)}
+          />
+          <button disabled={busy || !active} type="submit">
+            run agent as @{active}
+          </button>
+        </form>
+
+        {agentRun && (
+          <div style={{ marginTop: 8 }}>
+            <p style={{ fontSize: 12, color: "#555" }}>
+              session #{agentRun.id} · {agentRun.provider}/{agentRun.model || "?"} ·{" "}
+              {agentRun.step_count} steps · {agentRun.stopped_reason}
+            </p>
+            <ol>
+              {agentRun.actions.map((a) => (
+                <li key={a.step_index}>
+                  <strong>{a.action}</strong>
+                  {a.target_id != null ? ` #${a.target_id}` : ""}
+                  {a.handle ? ` @${a.handle}` : ""}
+                  {a.body ? `: “${a.body}”` : ""}
+                  {a.status !== "ok" ? ` — error: ${a.error}` : ""}
+                  {a.reasoning ? ` (${a.reasoning})` : ""}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </section>
     </main>
   );
 }

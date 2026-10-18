@@ -1033,3 +1033,30 @@ profile counts, full endpoint round-trip incl. 400/404 paths). `npm run build`
 OK.
 **Commit:** Sprint 20.1 commit + push to `main`.
 
+---
+
+## 2026-10-17 — Sprint 20.2 — Visual Agent
+
+**Plan:** Roadmap §20.2 — let an agent interact through the emulator
+(open → scroll → watch → read → decide → comment → navigate) and evaluate
+visual/social agents separately from real-world platform policies.
+**Scope:** `models/agent.py` (AgentSession/AgentAction trajectory),
+`ai/structured_output.py` (`AgentActionDraft` + parser),
+`ai/prompts/agent_action_v1.md` (+ registry/renderer), `ai/providers/` (stub
+`agent_action` mode + `ollama` provider via the OpenAI-compatible endpoint),
+`core/config.py` (Ollama settings), `services/visual_agent.py`,
+`api/emulator.py` agent routes, a frontend agent panel; tests.
+**Implement:** the agent is shown a text-rendered "screen" of the emulator
+(feed with post ids, open post + comments, profile) and returns one JSON action
+per step through the provider abstraction; actions execute against the sandbox
+and each step's observation + reasoning + action is stored immutably. Supports
+the deterministic stub (offline/tests) and local models via Ollama
+(`LLM_PROVIDER=ollama`, documented in `.env.example`). Endpoints:
+`POST /api/emulator/agent/run`, `GET /api/emulator/agent/sessions`,
+`GET /api/emulator/agent/sessions/{id}`. UI: agent panel on the Emulator page.
+**Verify:** `pytest` → **369 passed** (7 new: action parsing incl. unknown-action
+and non-JSON rejection, screen rendering, full stub trajectory with real side
+effects, max-step stop, empty-feed clean stop, unknown account, endpoint
+round-trip incl. 400/404). `npm run build` OK.
+**Commit:** Sprint 20.2 commit + push to `main`.
+

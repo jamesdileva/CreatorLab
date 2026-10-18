@@ -126,3 +126,60 @@ export const follow = (follower: string, followed: string): Promise<unknown> =>
 
 export const getProfile = (handle: string): Promise<EmulatorProfile> =>
   req<EmulatorProfile>(`${ROOT}/api/emulator/accounts/${encodeURIComponent(handle)}`);
+
+export interface AgentActionRecord {
+  step_index: number;
+  action: string;
+  target_id: number | null;
+  handle: string | null;
+  body: string;
+  watch_seconds: number | null;
+  liked: boolean | null;
+  reasoning: string;
+  observation: string;
+  status: string;
+  error: string;
+}
+
+export interface AgentSession {
+  id: number;
+  account_handle: string;
+  goal: string;
+  environment: string;
+  provider: string;
+  model: string;
+  prompt_version: string;
+  max_steps: number;
+  step_count: number;
+  stopped_reason: string;
+  created_at: string | null;
+  actions: AgentActionRecord[];
+}
+
+export interface AgentSessionSummary {
+  id: number;
+  account_handle: string;
+  goal: string;
+  provider: string;
+  model: string;
+  step_count: number;
+  stopped_reason: string;
+  created_at: string | null;
+}
+
+export const runAgent = (
+  account: string,
+  goal: string,
+  maxSteps = 8
+): Promise<AgentSession> =>
+  req<AgentSession>(`${ROOT}/api/emulator/agent/run`, {
+    method: "POST",
+    body: JSON.stringify({ account, goal, max_steps: maxSteps }),
+  });
+
+export const listAgentSessions = (): Promise<AgentSessionSummary[]> =>
+  req<AgentSessionSummary[]>(`${ROOT}/api/emulator/agent/sessions`);
+
+export const getAgentSession = (id: number): Promise<AgentSession> =>
+  req<AgentSession>(`${ROOT}/api/emulator/agent/sessions/${id}`);
+

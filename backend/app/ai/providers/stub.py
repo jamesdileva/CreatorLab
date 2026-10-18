@@ -5,6 +5,7 @@ providers read via the system prompt). In "json" mode it emits a valid
 episode draft; in "concepts" mode a JSON array of distinct concepts.
 """
 import json
+import re
 
 from .base import GenerateRequest, GenerateResponse, LLMProvider
 
@@ -297,10 +298,62 @@ def _prompt_participants(system_prompt: str) -> list[str]:
     return names or ["Hank", "Alex.exe"]
 
 
+def _agent_action_JSON(request: GenerateRequest) -> str:
+    """Deterministic agent trajectory for the emulator (roadmap Sprint 20.2).
+
+    Reads a post id (`#<id>`) and an author handle (`@name`) from the rendered
+    screen in the user message, then walks a fixed scripted sequence by step.
+    """
+    screen = request.user_message
+    feed_match = re.search(r"#(\d+)\]\s*@([a-z0-9_.-]+)", screen)
+    if feed_match:
+        post_id = int(feed_match.group(1))
+        author = feed_match.group(2)
+    else:
+        post = re.search(r"#(\d+)", screen)
+        handle = re.search(r"@([a-z0-9_.-]+)", screen)
+        post_id = int(post.group(1)) if post else None
+        author = handle.group(1) if handle else None
+
+    step = request.variant % 6
+    if post_id is None:
+        action = {"action": "scroll", "reasoning": "loading the feed"}
+        if step >= 4:
+            action = {"action": "stop", "reasoning": "nothing to engage with"}
+    elif step == 0:
+        action = {"action": "scroll", "reasoning": "scanning the feed"}
+    elif step == 1:
+        action = {"action": "open", "target_id": post_id, "reasoning": "opening the top post"}
+    elif step == 2:
+        action = {
+            "action": "watch",
+            "target_id": post_id,
+            "watch_seconds": 9,
+            "liked": True,
+            "reasoning": "watching and liking the post",
+        }
+    elif step == 3:
+        action = {
+            "action": "comment",
+            "target_id": post_id,
+            "body": "Nice one.",
+            "reasoning": "leaving a short comment after watching",
+        }
+    elif step == 4 and author:
+        action = {"action": "follow", "handle": author, "reasoning": "following the creator"}
+    else:
+        action = {"action": "stop", "reasoning": "goal met"}
+    return "```json\n" + json.dumps(action) + "\n```"
+
+
 class StubProvider(LLMProvider):
     name = "stub"
 
     def generate(self, request: GenerateRequest) -> GenerateResponse:
+        if request.response_format == "agent_action":
+            return GenerateResponse(
+                text=_agent_action_JSON(request), model="stub/deterministic-v1"
+            )
         if request.response_format == "cross_episode":
             return GenerateResponse(
                 text=_cross_episode_JSON(request), model="stub/deterministic-v1"

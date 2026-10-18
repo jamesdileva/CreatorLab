@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..models.emulator import EmulatorAccount
 from ..services import emulator_service as svc
+from ..services import visual_agent
 
 router = APIRouter(prefix="/api/emulator", tags=["emulator"])
 
@@ -160,5 +161,55 @@ def record_view(post_id: int, payload: ViewIn, db: Session = Depends(get_db)) ->
 def get_profile(handle: str, db: Session = Depends(get_db)) -> dict:
     try:
         return svc.profile(db, handle)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+# ---------- Visual/social agent (Sprint 20.2) ----------
+
+
+class AgentRunIn(BaseModel):
+    account: str
+    goal: str = ""
+    max_steps: int = 8
+    provider: str | None = None
+
+
+@router.post("/agent/run", status_code=status.HTTP_201_CREATED)
+def run_agent(payload: AgentRunIn, db: Session = Depends(get_db)) -> dict:
+    try:
+        session = visual_agent.run_agent(
+            db,
+            payload.account,
+            goal=payload.goal,
+            max_steps=payload.max_steps,
+            provider_name=payload.provider,
+        )
+    except ValueError as exc:
+        raise _bad(exc)
+    return visual_agent.session_detail(db, session.id)
+
+
+@router.get("/agent/sessions")
+def list_agent_sessions(db: Session = Depends(get_db)) -> list[dict]:
+    return [
+        {
+            "id": s.id,
+            "account_handle": s.account_handle,
+            "goal": s.goal,
+            "provider": s.provider,
+            "model": s.model,
+            "step_count": s.step_count,
+            "stopped_reason": s.stopped_reason,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in visual_agent.list_sessions(db)
+    ]
+
+
+@router.get("/agent/sessions/{session_id}")
+def get_agent_session(session_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        return visual_agent.session_detail(db, session_id)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

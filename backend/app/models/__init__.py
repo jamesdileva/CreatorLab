@@ -1,4 +1,5 @@
 from ..services.character_service import CharacterIdentity
+from .agent import AgentAction, AgentSession
 from .audit_status import AuditStatus
 from .audience_lore import AudienceLore
 from .canon import Canon, CanonCategory
@@ -39,6 +40,8 @@ from .youtube_account import YouTubeAccount
 __all__ = [
     "AUDIENCE_VERSION",
     "AccountKind",
+    "AgentAction",
+    "AgentSession",
     "AssetKind",
     "AuditStatus",
     "AudienceLore",

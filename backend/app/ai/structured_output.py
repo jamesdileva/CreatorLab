@@ -81,6 +81,49 @@ def _extract_json(text: str) -> Any:
     return json.loads(candidate)
 
 
+# Visual/social agent action (roadmap Sprint 20.2)
+AGENT_ACTIONS = (
+    "scroll",
+    "open",
+    "watch",
+    "read",
+    "comment",
+    "follow",
+    "profile",
+    "stop",
+)
+
+
+class AgentActionDraft(BaseModel):
+    action: str = Field(min_length=1)
+    target_id: int | None = None
+    handle: str | None = None
+    body: str = ""
+    watch_seconds: float | None = None
+    liked: bool | None = None
+    reasoning: str = ""
+
+    @field_validator("action")
+    @classmethod
+    def _known_action(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if cleaned not in AGENT_ACTIONS:
+            raise ValueError(f"unknown action '{value}'")
+        return cleaned
+
+
+def parse_agent_action(text: str) -> AgentActionDraft:
+    """Parse one agent action from provider output (roadmap Sprint 20.2)."""
+    try:
+        data = _extract_json(text)
+    except (json.JSONDecodeError, AttributeError) as exc:
+        raise ParseError(f"output is not valid JSON: {exc}") from exc
+    try:
+        return AgentActionDraft.model_validate(data)
+    except Exception as exc:
+        raise ParseError(f"agent action failed validation: {exc}") from exc
+
+
 def parse_episode_draft(text: str) -> EpisodeDraft:
     try:
         data = _extract_json(text)

@@ -14,6 +14,7 @@ PROMPT_VERSIONS: dict[str, str] = {
     "episode_prompt_v2": "episode_prompt_v2.md",
     "concepts_prompt_v1": "concepts_prompt_v1.md",
     "cross_episode_prompt_v1": "cross_episode_prompt_v1.md",
+    "agent_action_v1": "agent_action_v1.md",
 }
 
 
@@ -120,6 +121,29 @@ def render_episode_prompt(
         "next_episode_number": str(next_episode_number),
         "variant": str(variant),
         "json_schema": json_schema,
+    }
+    return _render(_load(PROMPT_VERSIONS[version]), values)
+
+
+def render_agent_prompt(
+    handle: str,
+    goal: str,
+    screen: str,
+    json_schema: str,
+    step: int,
+    max_steps: int,
+    version: str = "agent_action_v1",
+) -> str:
+    """Render the visual/social agent action prompt (roadmap Sprint 20.2)."""
+    if version not in PROMPT_VERSIONS:
+        raise KeyError(f"unknown prompt version: {version}")
+    values = {
+        "handle": handle,
+        "goal": goal or "Explore the feed and engage naturally.",
+        "screen": screen,
+        "json_schema": json_schema,
+        "step": str(step),
+        "max_steps": str(max_steps),
     }
     return _render(_load(PROMPT_VERSIONS[version]), values)
 

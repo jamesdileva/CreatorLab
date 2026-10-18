@@ -28,4 +28,11 @@ def get_provider(name: str | None = None) -> LLMProvider:
         return StubProvider()
     if resolved == "openai":
         return OpenAICompatibleProvider()
+    if resolved == "ollama":
+        # Ollama exposes an OpenAI-compatible endpoint and ignores the key.
+        return OpenAICompatibleProvider(
+            api_key=settings.ollama_api_key,
+            base_url=settings.ollama_base_url,
+            model=settings.ollama_model,
+        )
     raise ValueError(f"unknown LLM provider: {resolved}")

@@ -981,3 +981,28 @@ automated Direct Post is future work gated on the audit. No TikTok code written
 (§18.1 end goal); Sprint 18.2 remains gated.
 **Commit:** Sprint 18.1 commit + push to `main`.
 
+---
+
+## 2026-10-17 — Sprint 19.1 — Reddit Policy/API Feasibility
+
+**Plan:** Roadmap §19.1 — determine whether the current Reddit API and
+Responsible Builder requirements permit the intended conversational-creator
+experiment; no Reddit automation layer until the use is clearly permitted.
+**Scope:** research + a written determination (`docs/reddit-feasibility.md`); no
+application code. (18.2 cross-platform TikTok experiment skipped as it is
+access-gated on external account/app/policy provisioning.)
+**Implement:** researched the Responsible Builder Policy (updated 2026-10-05),
+Data API Terms (revised 2026-07-20), the Data API Wiki, app-labeling rules, and
+Devvit guidance. Documented the requirements and mapped them against the
+intended experiment and our hard boundaries.
+**Verify:** Determination — **NOT PERMITTED YET; do not build.** Reddit now
+requires explicit approval for any API access and mandates that non-human
+accounts carry an App label (no masking automation), while prohibiting automated
+posting/comments that constitute spam — structurally in conflict with an open
+conversational creator that presents as a human participant. Only a narrow,
+disclosed, moderator-consented, non-training, non-voting research path could
+qualify, and it would not measure what §19.2 intends. Recommended deferring
+Phase 19 in favor of the Phase 20 emulator laboratory. No Reddit code written
+(§19.1 end goal); Sprint 19.2 remains gated.
+**Commit:** Sprint 19.1 commit + push to `main`.
+

@@ -1006,3 +1006,30 @@ Phase 19 in favor of the Phase 20 emulator laboratory. No Reddit code written
 (§19.1 end goal); Sprint 19.2 remains gated.
 **Commit:** Sprint 19.1 commit + push to `main`.
 
+---
+
+## 2026-10-17 — Sprint 20.1 — Controlled Social Environment
+
+**Plan:** Roadmap §20.1 — build a controlled fake social app (feed, video,
+comment, profile, follow) that never touches a real platform, as a safe
+environment for agent interaction experiments. (Chosen over 18.2/19.2, which are
+access-gated by the TikTok/Reddit feasibility determinations.)
+**Scope:** `models/emulator.py` (EmulatorAccount/Post/Comment/Follow/View),
+`services/emulator_service.py`, `api/emulator.py` under `/api/emulator`, a
+frontend sandbox page + nav; tests.
+**Implement:** isolated sandbox — accounts (optional link to a fictional
+Creator, `sync_creator_accounts`), posts, threaded comments, follows, views/likes
+with a deterministic engagement score (`views + 2·likes + 3·comments`); feed
+ranked by engagement, filtered to followed accounts when a viewer has follows;
+profile with follower/following/post counts. Handle normalization,
+self-follow/empty-comment/negative-watch guards. No external calls — this is the
+roadmap-mandated sandbox, not engagement on any real platform (hard boundary
+§4/§20). UI: `Emulator.tsx` (accounts + acting-as, compose, feed, post detail
+with comments, watch+like, follow, profile).
+**Verify:** `pytest` → **362 passed** (9 new: account create/duplicate/validation,
+idempotent creator sync, follow rules + followed/global feed, engagement ranking,
+post/comment threading + detail, parent/post mismatch, view + engagement tally,
+profile counts, full endpoint round-trip incl. 400/404 paths). `npm run build`
+OK.
+**Commit:** Sprint 20.1 commit + push to `main`.
+

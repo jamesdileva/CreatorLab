@@ -25,7 +25,8 @@ export default function Dashboard() {
         <Link to="/experiments">Experiments</Link>{" · "}
         <Link to="/reality-gap">Reality gap</Link>{" · "}
         <Link to="/universe">Universe</Link>{" · "}
-        <Link to="/lore">Audience lore</Link>
+        <Link to="/lore">Audience lore</Link>{" · "}
+        <Link to="/emulator">Emulator</Link>
       </nav>
       <p>Episodes, simulation, and reality-gap land in later sprints.</p>
     </main>

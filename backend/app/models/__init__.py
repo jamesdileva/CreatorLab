@@ -6,6 +6,14 @@ from .concept import Concept, ConceptSet
 from .concept_score import ConceptScore, HumanRanking
 from .creator import Creator
 from .creator_memory import CreatorMemory, MemoryType
+from .emulator import (
+    AccountKind,
+    EmulatorAccount,
+    EmulatorComment,
+    EmulatorFollow,
+    EmulatorPost,
+    EmulatorView,
+)
 from .episode import Episode, EpisodeStatus
 from .experiment import ContentExperiment
 from .human_panel import HumanPanelRanking
@@ -30,6 +38,7 @@ from .youtube_account import YouTubeAccount
 
 __all__ = [
     "AUDIENCE_VERSION",
+    "AccountKind",
     "AssetKind",
     "AuditStatus",
     "AudienceLore",
@@ -42,6 +51,11 @@ __all__ = [
     "ContentExperiment",
     "Creator",
     "CreatorMemory",
+    "EmulatorAccount",
+    "EmulatorComment",
+    "EmulatorFollow",
+    "EmulatorPost",
+    "EmulatorView",
     "Episode",
     "EpisodeStatus",
     "HumanPanelRanking",

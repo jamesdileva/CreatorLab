@@ -4,6 +4,7 @@ import {
   applyRelationshipEvent,
   createMemory,
   createRelationship,
+  decideStrategyProposal,
   deleteMemory,
   distillPerformance,
   EVENT_TYPES,
@@ -11,13 +12,15 @@ import {
   getCreator,
   getIdentity,
   getPerformance,
+  getStrategyEvolution,
   listMemories,
   listRelationshipEvents,
   listRelationships,
+  proposeStrategyChanges,
   updateCreator,
   updateIdentity,
 } from "../services/creators";
-import type { PerformanceSummary } from "../services/creators";
+import type { PerformanceSummary, CreatorStrategyView } from "../services/creators";
 import { MEMORY_TYPES } from "../types/creator";
 import type { CharacterIdentity, Relationship, RelationshipEvent } from "../services/creators";
 import type { Creator, CreatorMemory, CreatorVoice } from "../types/creator";
@@ -57,6 +60,8 @@ export default function CreatorDetail() {
   const [relNote, setRelNote] = useState("");
   const [perfError, setPerfError] = useState("");
   const [perfBusy, setPerfBusy] = useState(false);
+  const [strategyView, setStrategyView] = useState<CreatorStrategyView | null>(null);
+  const [strategyBusy, setStrategyBusy] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -96,6 +101,9 @@ export default function CreatorDetail() {
         setPerformance(null);
         setPerfError("");
       });
+    getStrategyEvolution(Number(id))
+      .then(setStrategyView)
+      .catch(() => setStrategyView(null));
   }, [id]);
 
   const onApplyRelEvent = async (relId: number) => {
@@ -149,6 +157,31 @@ export default function CreatorDetail() {
       setPerfError(err instanceof Error ? err.message : "distill failed");
     } finally {
       setPerfBusy(false);
+    }
+  };
+
+  const onProposeStrategy = async () => {
+    if (!creator) return;
+    setStrategyBusy(true);
+    try {
+      await proposeStrategyChanges(creator.id);
+      setStrategyView(await getStrategyEvolution(creator.id));
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "proposal failed");
+    } finally {
+      setStrategyBusy(false);
+    }
+  };
+
+  const onDecideStrategy = async (proposalId: number, approve: boolean) => {
+    if (!creator) return;
+    try {
+      await decideStrategyProposal(proposalId, approve);
+      setStrategyView(await getStrategyEvolution(creator.id));
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "decision failed");
     }
   };
 
@@ -404,6 +437,59 @@ export default function CreatorDetail() {
       <button onClick={() => void onDistill()} disabled={perfBusy}>
         {perfBusy ? "distilling…" : "distill performance into memory"}
       </button>
+
+      <h2>Strategy evolution (Sprint 22.1)</h2>
+      <p style={{ fontSize: 12, color: "#555" }}>
+        Changes require evidence — each proposal names the prior episodes that
+        support it, and nothing changes without your approval.
+      </p>
+      {strategyView ? (
+        <>
+          <p style={{ fontSize: 13 }}>
+            revision {strategyView.strategy.revision} · topics [
+            {strategyView.strategy.topic_mix.join(", ") || "—"}] · formats [
+            {strategyView.strategy.format_mix.join(", ") || "—"}] · pacing "
+            {strategyView.strategy.pacing || "—"}" · structure "
+            {strategyView.strategy.episode_structure || "—"}" · humor "
+            {strategyView.strategy.humor_style || "—"}"
+          </p>
+          <button disabled={strategyBusy} onClick={() => void onProposeStrategy()}>
+            {strategyBusy ? "working…" : "generate evidence-based proposals"}
+          </button>
+          {strategyView.proposals.length === 0 ? (
+            <p>no proposals yet (need evidence)</p>
+          ) : (
+            <ul>
+              {strategyView.proposals.map((p) => (
+                <li key={p.id}>
+                  <strong>{p.dimension}</strong> → {JSON.stringify(p.proposed_value)}{" "}
+                  <em>[{p.status}]</em>
+                  <br />
+                  <small>{p.rationale}</small>
+                  <br />
+                  <small>
+                    evidence {p.evidence_count}/{p.min_evidence} ·{" "}
+                    {p.evidence.map((e) => `${e.source} n=${e.n}`).join(", ")}
+                  </small>
+                  {p.status === "PENDING" && (
+                    <>
+                      <br />
+                      <button onClick={() => void onDecideStrategy(p.id, true)}>
+                        approve
+                      </button>{" "}
+                      <button onClick={() => void onDecideStrategy(p.id, false)}>
+                        reject
+                      </button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : (
+        <p>loading strategy…</p>
+      )}
 
       <h2>Visual identity (Sprint 5.2)</h2>
       {identity === null ? (

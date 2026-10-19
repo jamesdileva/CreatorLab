@@ -204,3 +204,72 @@ export const listRelationshipEvents = (
   relationshipId: number
 ): Promise<RelationshipEvent[]> =>
   req<RelationshipEvent[]>(`${BASE}/relationships/${relationshipId}/events`);
+
+// strategy evolution (Sprint 22.1)
+const ROOT = env.VITE_API_URL ?? "http://localhost:8000";
+
+export interface StrategyProfile {
+  creator_id: number;
+  topic_mix: string[];
+  format_mix: string[];
+  pacing: string;
+  episode_structure: string;
+  humor_style: string;
+  revision: number;
+  strategy_version: string;
+  updated_at: string | null;
+}
+
+export interface StrategyEvidenceItem {
+  source: string;
+  n: number;
+  ids: number[];
+  value: string;
+  detail: string;
+}
+
+export interface StrategyProposal {
+  id: number;
+  creator_id: number;
+  dimension: string;
+  current_value: unknown;
+  proposed_value: unknown;
+  rationale: string;
+  evidence: StrategyEvidenceItem[];
+  evidence_count: number;
+  min_evidence: number;
+  status: string;
+  source_version: string;
+  note: string;
+  created_at: string | null;
+  decided_at: string | null;
+}
+
+export interface CreatorStrategyView {
+  strategy: StrategyProfile;
+  dimensions: string[];
+  evidence: Record<string, StrategyEvidenceItem[]>;
+  proposals: StrategyProposal[];
+}
+
+export const getStrategyEvolution = (
+  creatorId: number
+): Promise<CreatorStrategyView> =>
+  req<CreatorStrategyView>(`${ROOT}/api/strategy/creators/${creatorId}`);
+
+export const proposeStrategyChanges = (
+  creatorId: number
+): Promise<StrategyProposal[]> =>
+  req<StrategyProposal[]>(`${ROOT}/api/strategy/creators/${creatorId}/propose`, {
+    method: "POST",
+  });
+
+export const decideStrategyProposal = (
+  proposalId: number,
+  approve: boolean,
+  note = ""
+): Promise<StrategyProposal> =>
+  req<StrategyProposal>(`${ROOT}/api/strategy/proposals/${proposalId}/decide`, {
+    method: "POST",
+    body: JSON.stringify({ approve, note }),
+  });

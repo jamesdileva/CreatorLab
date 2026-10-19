@@ -7,6 +7,12 @@ from .concept import Concept, ConceptSet
 from .concept_score import ConceptScore, HumanRanking
 from .creator import Creator
 from .creator_memory import CreatorMemory, MemoryType
+from .creator_strategy import (
+    STRATEGY_DIMENSIONS,
+    STRATEGY_VERSION,
+    CreatorStrategy,
+    StrategyProposal,
+)
 from .emulator import (
     AccountKind,
     EmulatorAccount,
@@ -57,6 +63,7 @@ __all__ = [
     "ContentExperiment",
     "Creator",
     "CreatorMemory",
+    "CreatorStrategy",
     "EmulatorAccount",
     "EmulatorComment",
     "EmulatorFollow",
@@ -71,6 +78,9 @@ __all__ = [
     "RANKING_VERSION",
     "REACTION_VERSION",
     "RankingRun",
+    "STRATEGY_DIMENSIONS",
+    "STRATEGY_VERSION",
+    "StrategyProposal",
     "RelationshipEvent",
     "CreatorRelationship",
     "Render",

@@ -1111,3 +1111,32 @@ simulation flags, hard-block HIGH, literal `/risk` route + HIGH-first ordering,
 batch fast-lane approves only LOW, 404). `npm run build` OK.
 **Commit:** Sprint 21.2 commit + push to `main`.
 
+## 2026-10-18 — Sprint 22.1 — Strategy Evolution
+
+**Plan:** let creators change format mix, topic mix, pacing, episode structure,
+and humor style — but only on evidence. No "the AI thinks this will work": every
+change must cite the prior experiments/episodes that support it, and nothing is
+applied without an explicit human decision.
+**Scope:** `models/creator_strategy.py` (`CreatorStrategy`, `StrategyProposal`),
+`services/strategy_evolution.py`, `api/strategy.py` (+ router registration),
+frontend `services/creators.ts` + a strategy panel on `CreatorDetail.tsx`; tests.
+**Implement:** `gather_evidence` pulls per-dimension evidence from existing
+reports — topic/structure buckets (`performance_memory`), preferred hook
+(`hook_experiment_service`), preferred length (`length_experiment_service`), and
+humor-related categories (`failure_catalog`). `propose_changes` emits a proposal
+only when a dimension clears `MIN_EVIDENCE=3` (best evidence wins); each proposal
+stores current/proposed value, the evidence rows, the evidence count, the
+threshold, and a rationale naming the supporting episodes. Proposals are
+deduped against pending ones and never auto-apply: `decide_proposal` records
+APPROVED/REJECTED and only on approval writes the dimension into
+`CreatorStrategy` (revision++). Endpoints: `GET /api/strategy/creators/{id}`,
+`GET /api/strategy/creators/{id}/evidence`,
+`POST /api/strategy/creators/{id}/propose`, `GET /api/strategy/proposals`,
+`POST /api/strategy/proposals/{id}/decide`. UI: current strategy + proposal list
+with rationale, evidence counts, and approve/reject.
+**Verify:** `pytest` → **391 passed** (7 new: no-evidence yields no proposals,
+evidence-backed topic/structure proposals cite >=3 episodes, threshold gating,
+approval applies + locks the proposal, rejection leaves strategy unchanged,
+pending-dedup, endpoint round-trip incl. 400/404). `npm run build` OK.
+**Commit:** Sprint 22.1 commit + push to `main`.
+

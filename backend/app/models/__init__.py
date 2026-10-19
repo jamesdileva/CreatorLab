@@ -22,6 +22,7 @@ from .published_video import PublishedVideo
 from .relationship import CreatorRelationship, RelationshipEvent
 from .render import AssetKind, Render, RenderStatus
 from .scene import Scene
+from .selection import SELECTION_METHODS, CandidateSelection
 from .series import Series, SeriesStatus
 from .simulation import (
     RANKING_VERSION,
@@ -47,6 +48,7 @@ __all__ = [
     "AudienceLore",
     "Canon",
     "CanonCategory",
+    "CandidateSelection",
     "CharacterIdentity",
     "Concept",
     "ConceptScore",
@@ -72,6 +74,7 @@ __all__ = [
     "CreatorRelationship",
     "Render",
     "RenderStatus",
+    "SELECTION_METHODS",
     "Scene",
     "Series",
     "SeriesStatus",

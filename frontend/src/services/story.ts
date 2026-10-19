@@ -400,3 +400,41 @@ export const getConceptComparison = (
   setId: number
 ): Promise<ConceptComparison | null> =>
   req<ConceptComparison | null>(`${ROOT}/api/concept-sets/${setId}/comparison`);
+
+// automated candidate selection (Sprint 21.1)
+export type SelectionMethod = "score" | "simulation" | "combined";
+
+export interface SelectionResult {
+  id: number;
+  candidate_type: string;
+  series_id: number | null;
+  concept_set_id: number | null;
+  method: string;
+  metric: string;
+  count: number;
+  selected_ids: number[];
+  ranked_ids: number[];
+  scores: Record<string, number>;
+  ranking_run_id: number | null;
+  scorer_version: string;
+  audience_version: string;
+  seed: number;
+  note: string;
+  requires_human_approval: boolean;
+  created_at: string | null;
+  ranked?: { candidate_id: number; score: number }[];
+  selected?: { candidate_id: number; score: number }[];
+}
+
+export const selectFromConceptSet = (
+  setId: number,
+  method: SelectionMethod = "combined",
+  count = 1
+): Promise<SelectionResult> =>
+  req<SelectionResult>(`${ROOT}/api/selections/from-concept-set`, {
+    method: "POST",
+    body: JSON.stringify({ set_id: setId, method, count }),
+  });
+
+export const listSelections = (limit = 20): Promise<SelectionResult[]> =>
+  req<SelectionResult[]>(`${ROOT}/api/selections?limit=${limit}`);

@@ -1060,3 +1060,29 @@ effects, max-step stop, empty-feed clean stop, unknown account, endpoint
 round-trip incl. 400/404). `npm run build` OK.
 **Commit:** Sprint 20.2 commit + push to `main`.
 
+## 2026-10-18 — Sprint 21.1 — Automated Candidate Selection
+
+**Plan:** rank a candidate pool automatically and record the recommendation so
+manual selection of low-value candidates is removed — while publication still
+requires explicit human approval.
+**Scope:** `models/selection.py` (`CandidateSelection`),
+`services/selection_service.py`, `api/selections.py` (+ router registration in
+`main.py`), frontend `services/story.ts` + auto-select panel on
+`SeriesDetail.tsx`; tests.
+**Implement:** `select_candidates` ranks a pool by `score` (heuristic concept
+score, requires prior scoring), `simulation` (synthetic-audience
+`rank_candidates`), or `combined` (min-max normalized 50/50 blend); methods are
+validated per candidate type (episodes support simulation only). The immutable
+`CandidateSelection` stores selected + full ranked ids, score snapshot, method,
+metric, `ranking_run_id`, scorer/audience versions, seed, and note; the API
+reports `requires_human_approval: True`. Convenience `select_from_concept_set`
+handles the concept pool. Endpoints: `POST /api/selections`,
+`POST /api/selections/from-concept-set`, `GET /api/selections`,
+`GET /api/selections/{id}`. Selection never changes episode status — the
+human approval gate is untouched.
+**Verify:** `pytest` → **376 passed** (7 new: simulation selection, score
+requires scoring + top-ranked pick, combined, from-concept-set provenance,
+validation (bad type/method/metric, <2 candidates), episode selection leaves
+status unchanged, endpoint round-trip incl. 400/404). `npm run build` OK.
+**Commit:** Sprint 21.1 commit + push to `main`.
+

@@ -9,6 +9,7 @@ from .api.creators import router as creators_router
 from .api.emulator import router as emulator_router
 from .api.episodes import router as episodes_router
 from .api.experiments import router as experiments_router
+from .api.selections import router as selections_router
 from .api.simulation import router as simulation_router
 from .api.youtube import router as youtube_router
 from .core.database import Base, engine
@@ -29,6 +30,7 @@ app.include_router(creators_router)
 app.include_router(emulator_router)
 app.include_router(episodes_router)
 app.include_router(experiments_router)
+app.include_router(selections_router)
 app.include_router(simulation_router)
 app.include_router(youtube_router)
 

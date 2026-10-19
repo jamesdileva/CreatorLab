@@ -13,8 +13,10 @@ import {
   listConceptSets,
   listConcepts,
   listEpisodeHistory,
+  listSelections,
   listThreads,
   resolveThread,
+  selectFromConceptSet,
 } from "../services/story";
 import { listCreators } from "../services/creators";
 import { CANON_CATEGORIES } from "../types/story";
@@ -25,6 +27,8 @@ import type {
   CrossEpisodeResult,
   GeneratedConcepts,
   GeneratedEpisode,
+  SelectionMethod,
+  SelectionResult,
 } from "../services/story";
 import { getSeries } from "../services/story";
 import type { Series } from "../types/story";
@@ -54,6 +58,10 @@ export default function SeriesDetail() {
   const [participants, setParticipants] = useState<number[]>([]);
   const [crossResult, setCrossResult] = useState<CrossEpisodeResult | null>(null);
   const [crossBusy, setCrossBusy] = useState(false);
+  const [selMethod, setSelMethod] = useState<SelectionMethod>("combined");
+  const [selBusy, setSelBusy] = useState(false);
+  const [selection, setSelection] = useState<SelectionResult | null>(null);
+  const [selections, setSelections] = useState<SelectionResult[]>([]);
 
   const onGenerateEpisode = async () => {
     setGenerating(true);
@@ -74,6 +82,9 @@ export default function SeriesDetail() {
     listThreads(seriesId).then(setThreads).catch(() => setThreads([]));
     listCanon(seriesId).then(setCanon).catch(() => setCanon([]));
     listConceptSets(seriesId).then(setConceptSets).catch(() => setConceptSets([]));
+    listSelections(10)
+      .then((all) => setSelections(all.filter((s) => s.series_id === seriesId)))
+      .catch(() => setSelections([]));
   };
 
   useEffect(() => {
@@ -168,6 +179,21 @@ export default function SeriesDetail() {
     listConcepts(setId)
       .then(setOpenSetConcepts)
       .catch(() => setOpenSetConcepts([]));
+  };
+
+  const onAutoSelect = async (setId: number) => {
+    setSelBusy(true);
+    try {
+      const result = await selectFromConceptSet(setId, selMethod, 1);
+      setSelection(result);
+      onOpenConceptSet(setId);
+      refresh();
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "selection failed");
+    } finally {
+      setSelBusy(false);
+    }
   };
 
   const onCreateCanon = async (e: React.FormEvent) => {
@@ -430,12 +456,34 @@ export default function SeriesDetail() {
       {conceptSets.length > 0 && (
         <>
           <h3>Previous concept sets</h3>
+          <p style={{ fontSize: 12, color: "#555" }}>
+            Auto-select ranks the pool (score / simulated audience / combined)
+            and records a recommendation — human approval is still required to
+            publish.
+          </p>
+          <label>
+            method:{" "}
+            <select
+              value={selMethod}
+              onChange={(e) => setSelMethod(e.target.value as SelectionMethod)}
+            >
+              <option value="combined">combined</option>
+              <option value="score">score</option>
+              <option value="simulation">simulation</option>
+            </select>
+          </label>
           <ul>
             {conceptSets.map((s) => (
               <li key={s.id}>
                 {s.topic} ({s.created_at}){" "}
                 <button onClick={() => onOpenConceptSet(s.id)}>
                   {openSetId === s.id ? "shown" : "show"}
+                </button>{" "}
+                <button
+                  disabled={selBusy}
+                  onClick={() => void onAutoSelect(s.id)}
+                >
+                  {selBusy ? "selecting…" : "auto-select"}
                 </button>
               </li>
             ))}
@@ -448,6 +496,52 @@ export default function SeriesDetail() {
                 </li>
               ))}
             </ol>
+          )}
+          {selection && (
+            <div
+              style={{
+                border: "1px solid #ccc",
+                borderRadius: 8,
+                padding: 12,
+                marginTop: 8,
+              }}
+            >
+              <p>
+                <strong>Auto-selected</strong> (method: {selection.method}
+                {selection.metric ? ` · metric: ${selection.metric}` : ""}):{" "}
+                {selection.selected_ids
+                  .map((id) => {
+                    const c = openSetConcepts.find((x) => x.id === id);
+                    return c ? c.title : `#${id}`;
+                  })
+                  .join(", ")}
+              </p>
+              <p style={{ fontSize: 12, color: "#555" }}>
+                {selection.note} · requires human approval:{" "}
+                {String(selection.requires_human_approval)}
+              </p>
+              <ol>
+                {(selection.ranked ?? []).map((r) => {
+                  const c = openSetConcepts.find((x) => x.id === r.candidate_id);
+                  return (
+                    <li key={r.candidate_id}>
+                      {c ? c.title : `#${r.candidate_id}`} — {r.score}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
+          {selections.length > 0 && (
+            <p style={{ fontSize: 12, color: "#555" }}>
+              recent selections:{" "}
+              {selections
+                .map(
+                  (s) =>
+                    `#${s.id} ${s.method} → ${s.selected_ids.join("/")}`
+                )
+                .join("; ")}
+            </p>
           )}
         </>
       )}

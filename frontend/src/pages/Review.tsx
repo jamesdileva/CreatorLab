@@ -14,6 +14,24 @@ interface QueueItem {
   created_at: string;
 }
 
+interface RiskRow {
+  episode_id: number;
+  title: string;
+  episode_number: number;
+  status: string;
+  series_id: number;
+  level: string;
+  fast_lane: boolean;
+  reasons: string[];
+  classifier_version: string;
+}
+
+const LEVEL_COLOR: Record<string, string> = {
+  HIGH: "crimson",
+  MEDIUM: "#a06000",
+  LOW: "green",
+};
+
 interface Risk {
   code: string;
   severity: string;
@@ -72,15 +90,50 @@ export default function Review() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishedMsg, setPublishedMsg] = useState("");
+  const [risk, setRisk] = useState<Record<number, RiskRow>>({});
+  const [fastBusy, setFastBusy] = useState(false);
+  const [fastMsg, setFastMsg] = useState("");
 
   const refreshQueue = () =>
     req<QueueItem[]>(`${ROOT}/api/review-queue`)
       .then(setQueue)
       .catch((e) => setError(e instanceof Error ? e.message : "load failed"));
 
+  const refreshRisk = () =>
+    req<RiskRow[]>(`${ROOT}/api/review-queue/risk`)
+      .then((rows) =>
+        setRisk(Object.fromEntries(rows.map((r) => [r.episode_id, r])))
+      )
+      .catch(() => setRisk({}));
+
   useEffect(() => {
     void refreshQueue();
+    void refreshRisk();
   }, []);
+
+  const runFastLane = async () => {
+    setFastBusy(true);
+    try {
+      const out = await req<{
+        approved: number[];
+        skipped: number[];
+        classifier_version: string;
+      }>(`${ROOT}/api/review-queue/fast-lane`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      setFastMsg(
+        `fast lane approved ${out.approved.length}, skipped ${out.skipped.length} (${out.classifier_version})`
+      );
+      await refreshQueue();
+      await refreshRisk();
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "fast lane failed");
+    } finally {
+      setFastBusy(false);
+    }
+  };
 
   const openReview = (id: number) => {
     setSelectedId(id);
@@ -93,7 +146,7 @@ export default function Review() {
       .catch((e) => setError(e instanceof Error ? e.message : "load failed"));
   };
 
-  const act = async (action: "approve" | "reject") => {
+  const act = async (action: "approve" | "reject" | "fast-approve") => {
     if (!selectedId) return;
     try {
       await req(`${ROOT}/api/episodes/${selectedId}/${action}`, {
@@ -103,6 +156,7 @@ export default function Review() {
       setDetail(null);
       setSelectedId(null);
       await refreshQueue();
+      await refreshRisk();
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : `${action} failed`);
@@ -150,6 +204,16 @@ export default function Review() {
       <h1>Approval queue (Sprint 6.1)</h1>
       {error && <p style={{ color: "crimson" }}>{error}</p>}
 
+      <h2>Risk-based approval (Sprint 21.2)</h2>
+      <p style={{ fontSize: 12, color: "#555" }}>
+        LOW-risk items may take a faster path — still an explicit, human action.
+        MEDIUM/HIGH require standard review; publishing stays a separate step.
+      </p>
+      <button disabled={fastBusy || !queue || queue.length === 0} onClick={() => void runFastLane()}>
+        {fastBusy ? "approving…" : "fast-lane approve LOW-risk"}
+      </button>
+      {fastMsg && <p style={{ color: "green" }}>{fastMsg}</p>}
+
       <div style={{ display: "flex", gap: 24 }}>
         <div style={{ minWidth: 260 }}>
           <h2>Pending ({queue.length})</h2>
@@ -160,7 +224,13 @@ export default function Review() {
               {queue.map((q) => (
                 <li key={q.id}>
                   <button onClick={() => openReview(q.id)}>
-                    Ep {q.episode_number}: {q.title} [{q.status}]
+                    Ep {q.episode_number}: {q.title} [{q.status}]{" "}
+                    {risk[q.id] && (
+                      <span style={{ color: LEVEL_COLOR[risk[q.id].level] }}>
+                        [{risk[q.id].level}
+                        {risk[q.id].fast_lane ? "·fast" : ""}]
+                      </span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -183,6 +253,14 @@ export default function Review() {
               </p>
 
               <h3>Risks [{detail.risk_status}]</h3>
+              {selectedId != null && risk[selectedId] && (
+                <p style={{ color: LEVEL_COLOR[risk[selectedId].level] }}>
+                  <strong>risk level: {risk[selectedId].level}</strong>
+                  {risk[selectedId].fast_lane
+                    ? " — eligible for fast lane"
+                    : " — standard review required"}
+                </p>
+              )}
               <ul>
                 {detail.risks.map((r, i) => (
                   <li
@@ -240,6 +318,11 @@ export default function Review() {
                 {saving ? "saving…" : "save edit"}
               </button>{" "}
               <button onClick={() => void act("approve")}>approve</button>{" "}
+              {selectedId != null && risk[selectedId]?.fast_lane && (
+                <button onClick={() => void act("fast-approve")}>
+                  fast-approve (LOW)
+                </button>
+              )}{" "}
               <button onClick={() => void act("reject")}>reject</button>{" "}
               <button disabled={publishing} onClick={() => void onPublish()}>
                 {publishing ? "publishing…" : "publish privately"}

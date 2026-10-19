@@ -21,6 +21,7 @@ from .human_panel import HumanPanelRanking
 from .published_video import PublishedVideo
 from .relationship import CreatorRelationship, RelationshipEvent
 from .render import AssetKind, Render, RenderStatus
+from .risk import RiskAssessment
 from .scene import Scene
 from .selection import SELECTION_METHODS, CandidateSelection
 from .series import Series, SeriesStatus
@@ -74,6 +75,7 @@ __all__ = [
     "CreatorRelationship",
     "Render",
     "RenderStatus",
+    "RiskAssessment",
     "SELECTION_METHODS",
     "Scene",
     "Series",

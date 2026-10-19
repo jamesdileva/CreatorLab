@@ -37,6 +37,13 @@ from ..services.episode_service import (
     generate_episode,
 )
 from ..services.review_service import review_payload, review_queue
+from ..services.risk_service import (
+    CLASSIFIER_VERSION,
+    classify_episode,
+    latest_assessment,
+    record_assessment,
+    risk_queue,
+)
 from ..services.scoring_service import (
     SCORER_VERSION,
     compare_with_human,
@@ -359,6 +366,32 @@ def reject_episode_endpoint(episode_id: int, db: Session = Depends(get_db)) -> A
     return ApproveOut(episode_id=episode.id, status=episode.status.value)
 
 
+@router.post("/api/episodes/{episode_id}/fast-approve", response_model=ApproveOut)
+def fast_approve_episode_endpoint(
+    episode_id: int, db: Session = Depends(get_db)
+) -> ApproveOut:
+    """Faster approval path for LOW-risk content (Sprint 21.2).
+
+    Still an explicit human action; MEDIUM/HIGH content must use standard review.
+    """
+    episode = _episode_or_404(db, episode_id)
+    verdict = classify_episode(db, episode)
+    if not verdict.fast_lane:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"risk level {verdict.level} is not eligible for the fast lane — "
+                "use standard review"
+            ),
+        )
+    try:
+        episode = approve_episode(db, episode_id)
+    except VideoError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    record_assessment(db, episode, verdict, actor="human", note="fast-lane approval")
+    return ApproveOut(episode_id=episode.id, status=episode.status.value)
+
+
 class RenderRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -478,6 +511,83 @@ class QueueItemRead(BaseModel):
 @router.get("/api/review-queue", response_model=list[QueueItemRead])
 def list_review_queue(db: Session = Depends(get_db)) -> list[Episode]:
     return review_queue(db)
+
+
+# ---------- Risk-based approval (Sprint 21.2) ----------
+# NOTE: literal "/risk" and "/fast-lane" routes must precede "/{episode_id}".
+
+
+class RiskVerdictRead(BaseModel):
+    level: str
+    fast_lane: bool
+    reasons: list[str]
+    signals: dict
+    classifier_version: str
+
+
+class RiskQueueItem(BaseModel):
+    episode_id: int
+    title: str
+    episode_number: int
+    status: str
+    series_id: int
+    level: str
+    fast_lane: bool
+    reasons: list[str]
+    classifier_version: str
+
+
+class FastLaneOut(BaseModel):
+    approved: list[int]
+    skipped: list[int]
+    classifier_version: str
+
+
+@router.get("/api/review-queue/risk", response_model=list[RiskQueueItem])
+def get_review_risk_queue(db: Session = Depends(get_db)) -> list[dict]:
+    """Pending episodes classified LOW/MEDIUM/HIGH, HIGH first."""
+    return risk_queue(db)
+
+
+@router.post("/api/review-queue/fast-lane", response_model=FastLaneOut)
+def run_fast_lane(db: Session = Depends(get_db)) -> FastLaneOut:
+    """Approve every pending LOW-risk episode in one explicit human action.
+
+    Reduces workload without removing oversight: MEDIUM/HIGH are skipped, and
+    publishing remains a separate, explicit human step.
+    """
+    approved: list[int] = []
+    skipped: list[int] = []
+    for episode in list(review_queue(db)):
+        verdict = classify_episode(db, episode)
+        if not verdict.fast_lane:
+            skipped.append(episode.id)
+            continue
+        try:
+            approved_episode = approve_episode(db, episode.id)
+        except VideoError:
+            skipped.append(episode.id)
+            continue
+        record_assessment(
+            db, approved_episode, verdict, actor="human", note="fast-lane batch"
+        )
+        approved.append(episode.id)
+    return FastLaneOut(
+        approved=approved, skipped=skipped, classifier_version=CLASSIFIER_VERSION
+    )
+
+
+@router.get("/api/episodes/{episode_id}/risk", response_model=RiskVerdictRead)
+def get_episode_risk(episode_id: int, db: Session = Depends(get_db)) -> RiskVerdictRead:
+    episode = _episode_or_404(db, episode_id)
+    verdict = classify_episode(db, episode)
+    return RiskVerdictRead(
+        level=verdict.level,
+        fast_lane=verdict.fast_lane,
+        reasons=verdict.reasons,
+        signals=verdict.signals,
+        classifier_version=verdict.classifier_version,
+    )
 
 
 @router.get("/api/review-queue/{episode_id}", response_model=ReviewOut)

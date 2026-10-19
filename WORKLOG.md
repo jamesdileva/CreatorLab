@@ -1086,3 +1086,28 @@ validation (bad type/method/metric, <2 candidates), episode selection leaves
 status unchanged, endpoint round-trip incl. 400/404). `npm run build` OK.
 **Commit:** Sprint 21.1 commit + push to `main`.
 
+## 2026-10-18 — Sprint 21.2 — Risk-Based Approval
+
+**Plan:** classify pending content LOW/MEDIUM/HIGH so reviewers can prioritise,
+and let LOW-risk content take a faster path — reducing human workload without
+removing oversight (publishing stays a separate, explicit human step).
+**Scope:** `models/risk.py` (`RiskAssessment`), `services/risk_service.py`,
+risk routes in `api/episodes.py`, frontend `pages/Review.tsx`; tests.
+**Implement:** `risk-v1` classifier reuses the deterministic screens
+(`review_service`) + latest simulation aggregate: any BLOCK risk, a sensitive
+topic, or a simulation flagging risky reception (controversy/outrage/etc.) →
+HIGH; other REVIEW risks, a missing simulation, or low simulated watch
+(<0.35) → MEDIUM; otherwise LOW (`fast_lane`). Standard review requirements
+(clean, synthetic-media disclosure) never escalate on their own. Verdicts are
+persisted as immutable `RiskAssessment` rows on assessment/approval.
+Endpoints: `GET /api/review-queue/risk` (literal route ahead of `/{id}`),
+`GET /api/episodes/{id}/risk`, `POST /api/episodes/{id}/fast-approve` (LOW only,
+else 422), `POST /api/review-queue/fast-lane` (batch-approve pending LOW, skip
+the rest). None of these publish; the YouTube publish gate is untouched. UI:
+risk badges + levels in the approval queue with a fast-lane button.
+**Verify:** `pytest` → **384 passed** (8 new: LOW fast-lane approve + audit row,
+MEDIUM without simulation blocks fast lane, HIGH sensitive topic, HIGH from
+simulation flags, hard-block HIGH, literal `/risk` route + HIGH-first ordering,
+batch fast-lane approves only LOW, 404). `npm run build` OK.
+**Commit:** Sprint 21.2 commit + push to `main`.
+

@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.creators import router as creators_router
 from .api.character_development import router as character_development_router
+from .api.competition import router as competition_router
 from .api.emulator import router as emulator_router
 from .api.episodes import router as episodes_router
 from .api.experiments import router as experiments_router
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="CreatorLab", version="0.1.1", lifespan=lifespan)
 app.include_router(creators_router)
 app.include_router(character_development_router)
+app.include_router(competition_router)
 app.include_router(emulator_router)
 app.include_router(episodes_router)
 app.include_router(experiments_router)

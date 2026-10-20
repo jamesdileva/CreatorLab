@@ -1168,3 +1168,32 @@ episode evidence link + ownership validation, prompt-block formatting and
 creator-voice injection, endpoint round-trip incl. 400/404). `npm run build` OK.
 **Commit:** Sprint 22.2 commit + push to `main`.
 
+## 2026-10-19 — Sprint 23.1 — Artificial Creator Competition
+
+**Plan:** make the universe game-like — creators compete on growth, subscriber
+conversion, retention, audience loyalty, and episode performance — while the
+competition stays grounded in organic real-world results (no artificial
+engagement, simulation/emulator data excluded).
+**Scope:** `services/competition_service.py`, `api/competition.py` (+ router
+registration), frontend `pages/Competition.tsx` (+ route/nav), tests.
+**Implement:** the service reads only latest `VideoMetrics` snapshots attached
+to real `PublishedVideo` rows and derives five dimensions per creator:
+`growth` (summed subscriber gain), `subscriber_conversion` (gain / views),
+`retention` (minutes watched / possible minutes, null when the Analytics API
+hasn't reported it), `audience_loyalty` ((likes + comments) / views), and
+`episode_performance` (mean views per video). Creators need
+`MIN_EPISODES=2` videos with metrics and non-zero views to be eligible.
+Each dimension is ranked 1..N (higher is better, ties broken by creator id);
+`composite_rank` is the mean of available dimension ranks with
+`dimension_coverage` exposed. Interpretation is gated at >=2 eligible creators
+and the response carries `competition_version`, sample counts, and an
+organic-only note. Endpoints: `GET /api/competition/leaderboard` (optional
+`min_episodes`), `GET /api/competition/creators/{id}` (404 unknown). UI:
+ranked table with per-dimension values + a per-dimension rank table; ineligible
+creators are shown dimmed, never ranked.
+**Verify:** `pytest` → **405 passed** (6 new: dimension math incl. retention,
+latest-snapshot-wins, missing retention stays null, leaderboard ordering, ineligible
+exclusion/gating, endpoint round-trip incl. organic-only note + 404).
+`npm run build` OK.
+**Commit:** Sprint 23.1 commit + push to `main`.
+

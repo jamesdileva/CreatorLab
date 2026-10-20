@@ -14,6 +14,7 @@ import Universe from "./pages/Universe";
 import AudienceLore from "./pages/AudienceLore";
 import Audience from "./pages/Audience";
 import Emulator from "./pages/Emulator";
+import Competition from "./pages/Competition";
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
       <Route path="/universe" element={<Universe />} />
       <Route path="/lore" element={<AudienceLore />} />
       <Route path="/simulation" element={<Audience />} />
+      <Route path="/competition" element={<Competition />} />
       <Route path="/emulator" element={<Emulator />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

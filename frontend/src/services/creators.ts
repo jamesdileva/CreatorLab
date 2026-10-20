@@ -273,3 +273,59 @@ export const decideStrategyProposal = (
     method: "POST",
     body: JSON.stringify({ approve, note }),
   });
+
+// character development (Sprint 22.2)
+export interface CharacterTrait {
+  creator_id: number;
+  trait: string;
+  value: string;
+  stage: number;
+  updated_at: string | null;
+}
+
+export interface CharacterDevelopment {
+  id: number;
+  creator_id: number;
+  trait: string;
+  from_value: string | null;
+  to_value: string;
+  reason: string;
+  episode_id: number | null;
+  source: string;
+  created_at: string | null;
+}
+
+export interface CharacterArc {
+  creator_id: number;
+  traits: CharacterTrait[];
+  arcs: {
+    trait: string;
+    current: string;
+    stages: number;
+    path: string[];
+    text: string;
+  }[];
+  history: CharacterDevelopment[];
+}
+
+export const getCharacterArc = (creatorId: number): Promise<CharacterArc> =>
+  req<CharacterArc>(`${ROOT}/api/character-development/creators/${creatorId}`);
+
+export const defineCharacterTrait = (
+  creatorId: number,
+  trait: string,
+  value: string
+): Promise<CharacterTrait> =>
+  req<CharacterTrait>(
+    `${ROOT}/api/character-development/creators/${creatorId}/traits`,
+    { method: "POST", body: JSON.stringify({ trait, value }) }
+  );
+
+export const recordCharacterDevelopment = (
+  creatorId: number,
+  payload: { trait: string; to_value: string; reason: string; episode_id?: number }
+): Promise<CharacterDevelopment> =>
+  req<CharacterDevelopment>(
+    `${ROOT}/api/character-development/creators/${creatorId}/developments`,
+    { method: "POST", body: JSON.stringify(payload) }
+  );

@@ -12,6 +12,7 @@ from ..ai.providers import (
 from ..models.creator import Creator
 from ..models.creator_memory import CreatorMemory
 from ..core.config import settings
+from .character_development import character_context
 
 MAX_MEMORIES = 10  # bound prompt size; scale later with evidence (guide §27)
 
@@ -33,16 +34,24 @@ def retrieve_memories(db: Session, creator_id: int) -> list[CreatorMemory]:
     )
 
 
-def build_system_prompt(creator: Creator, version: str, memories: list[CreatorMemory]) -> str:
+def build_system_prompt(
+    creator: Creator,
+    version: str,
+    memories: list[CreatorMemory],
+    traits_block: str = "",
+) -> str:
     """Render the frozen prompt template, then append per-call memory context.
 
-    Templates stay versioned and unmodified (guide §26); memory is injected
-    per call so the same stored fact can be replayed for reproducibility.
+    Templates stay versioned and unmodified (guide §26); memory and the
+    character's current (evolved) traits are injected per call so the same
+    stored fact can be replayed for reproducibility.
     """
     system_prompt = render_creator_prompt(creator, version)
     if memories:
         bullets = "\n".join(f"- [{m.type.value}] {m.content}" for m in memories)
         system_prompt += f"{MEMORY_HEADER}\n{bullets}"
+    if traits_block:
+        system_prompt += f"\n\n{traits_block}"
     return system_prompt
 
 
@@ -61,7 +70,8 @@ def generate_creator_response(
     """
     version = prompt_version or settings.creator_prompt_version
     memories = retrieve_memories(db, creator.id) if use_memory else []
-    system_prompt = build_system_prompt(creator, version, memories)
+    traits_block = character_context(db, creator.id)
+    system_prompt = build_system_prompt(creator, version, memories, traits_block)
     provider: LLMProvider = get_provider(provider_name)
     response = provider.generate(
         GenerateRequest(

@@ -24,6 +24,7 @@ from ..models.creator_memory import CreatorMemory
 from ..models.scene import Scene
 from ..models.series import Series
 from ..models.story_thread import StoryThread, ThreadStatus
+from .character_development import character_context
 from .creator_service import retrieve_memories
 
 JSON_SCHEMA = (
@@ -114,6 +115,9 @@ def generate_episode(
         universe_facts=universe_facts,
         version=version,
     )
+    traits_block = character_context(db, creator.id)
+    if traits_block:
+        system_prompt += f"\n\n{traits_block}"
 
     provider: LLMProvider = get_provider(provider_name)
     response: GenerateResponse = provider.generate(

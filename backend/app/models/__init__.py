@@ -3,6 +3,7 @@ from .agent import AgentAction, AgentSession
 from .audit_status import AuditStatus
 from .audience_lore import AudienceLore
 from .canon import Canon, CanonCategory
+from .character_development import CharacterDevelopment, CharacterTrait
 from .concept import Concept, ConceptSet
 from .concept_score import ConceptScore, HumanRanking
 from .creator import Creator
@@ -56,7 +57,9 @@ __all__ = [
     "Canon",
     "CanonCategory",
     "CandidateSelection",
+    "CharacterDevelopment",
     "CharacterIdentity",
+    "CharacterTrait",
     "Concept",
     "ConceptScore",
     "ConceptSet",

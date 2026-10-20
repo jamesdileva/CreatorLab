@@ -1140,3 +1140,31 @@ approval applies + locks the proposal, rejection leaves strategy unchanged,
 pending-dedup, endpoint round-trip incl. 400/404). `npm run build` OK.
 **Commit:** Sprint 22.1 commit + push to `main`.
 
+## 2026-10-18 — Sprint 22.2 — Character Development
+
+**Plan:** let characters change over time (e.g. Hank: `anti_ai` →
+`cautiously_accepts` → `automation_interested`) rather than staying frozen in a
+static prompt. Every change is grounded in a reason/story event, recorded as an
+append-only arc, and injected back into generation.
+**Scope:** `models/character_development.py` (`CharacterTrait`,
+`CharacterDevelopment`), `services/character_development.py`,
+`api/character_development.py` (+ router registration), trait injection in
+`creator_service` + `episode_service`, frontend `services/creators.ts` + a panel
+on `CreatorDetail.tsx`; tests.
+**Implement:** `CharacterTrait` holds the current value/stage per named trait;
+`define_trait` seeds it (recorded as the first arc step). `record_development`
+requires a non-empty reason, rejects unchanged/unknown traits, and optionally
+links an episode that must belong to the creator. `character_arc` returns
+current traits, per-trait paths ("ai_stance: anti_ai -> cautiously_accepts -> …"),
+and full history. Current traits are injected as a "Character development"
+prompt block into both creator-voice generation and episode generation, so
+evolution actually affects new content. Endpoints: `GET .../creators/{id}`,
+`POST .../creators/{id}/traits`, `POST .../creators/{id}/developments`,
+`GET .../creators/{id}/traits/{trait}`. UI: arc list, define-trait and
+record-development forms, and history.
+**Verify:** `pytest` → **399 passed** (8 new: full arc path, reason required,
+unchanged value rejected, undefined trait rejected, duplicate define rejected,
+episode evidence link + ownership validation, prompt-block formatting and
+creator-voice injection, endpoint round-trip incl. 400/404). `npm run build` OK.
+**Commit:** Sprint 22.2 commit + push to `main`.
+

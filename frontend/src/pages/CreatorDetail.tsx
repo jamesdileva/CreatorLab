@@ -5,10 +5,12 @@ import {
   createMemory,
   createRelationship,
   decideStrategyProposal,
+  defineCharacterTrait,
   deleteMemory,
   distillPerformance,
   EVENT_TYPES,
   generateCreatorVoice,
+  getCharacterArc,
   getCreator,
   getIdentity,
   getPerformance,
@@ -17,10 +19,15 @@ import {
   listRelationshipEvents,
   listRelationships,
   proposeStrategyChanges,
+  recordCharacterDevelopment,
   updateCreator,
   updateIdentity,
 } from "../services/creators";
-import type { PerformanceSummary, CreatorStrategyView } from "../services/creators";
+import type {
+  CharacterArc,
+  CreatorStrategyView,
+  PerformanceSummary,
+} from "../services/creators";
 import { MEMORY_TYPES } from "../types/creator";
 import type { CharacterIdentity, Relationship, RelationshipEvent } from "../services/creators";
 import type { Creator, CreatorMemory, CreatorVoice } from "../types/creator";
@@ -62,6 +69,14 @@ export default function CreatorDetail() {
   const [perfBusy, setPerfBusy] = useState(false);
   const [strategyView, setStrategyView] = useState<CreatorStrategyView | null>(null);
   const [strategyBusy, setStrategyBusy] = useState(false);
+  const [arc, setArc] = useState<CharacterArc | null>(null);
+  const [traitName, setTraitName] = useState("");
+  const [traitValue, setTraitValue] = useState("");
+  const [devTrait, setDevTrait] = useState("");
+  const [devValue, setDevValue] = useState("");
+  const [devReason, setDevReason] = useState("");
+  const [devEpisode, setDevEpisode] = useState("");
+  const [charBusy, setCharBusy] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -104,6 +119,9 @@ export default function CreatorDetail() {
     getStrategyEvolution(Number(id))
       .then(setStrategyView)
       .catch(() => setStrategyView(null));
+    getCharacterArc(Number(id))
+      .then(setArc)
+      .catch(() => setArc(null));
   }, [id]);
 
   const onApplyRelEvent = async (relId: number) => {
@@ -182,6 +200,46 @@ export default function CreatorDetail() {
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "decision failed");
+    }
+  };
+
+  const onDefineTrait = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creator) return;
+    setCharBusy(true);
+    try {
+      await defineCharacterTrait(creator.id, traitName, traitValue);
+      setTraitName("");
+      setTraitValue("");
+      setArc(await getCharacterArc(creator.id));
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "trait define failed");
+    } finally {
+      setCharBusy(false);
+    }
+  };
+
+  const onDevelop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creator) return;
+    setCharBusy(true);
+    try {
+      await recordCharacterDevelopment(creator.id, {
+        trait: devTrait,
+        to_value: devValue,
+        reason: devReason,
+        episode_id: devEpisode ? Number(devEpisode) : undefined,
+      });
+      setDevValue("");
+      setDevReason("");
+      setDevEpisode("");
+      setArc(await getCharacterArc(creator.id));
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "development failed");
+    } finally {
+      setCharBusy(false);
     }
   };
 
@@ -489,6 +547,99 @@ export default function CreatorDetail() {
         </>
       ) : (
         <p>loading strategy…</p>
+      )}
+
+      <h2>Character development (Sprint 22.2)</h2>
+      <p style={{ fontSize: 12, color: "#555" }}>
+        Characters evolve instead of staying static prompts. Every change needs a
+        reason and is recorded as an append-only arc; current traits are injected
+        into generation.
+      </p>
+      {arc && (
+        <>
+          {arc.arcs.length === 0 ? (
+            <p>no evolving traits yet</p>
+          ) : (
+            <ul>
+              {arc.arcs.map((a) => (
+                <li key={a.trait}>
+                  <strong>{a.text}</strong> <small>({a.stages} stages)</small>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form onSubmit={(e) => void onDefineTrait(e)}>
+            <input
+              placeholder="trait (e.g. ai_stance)"
+              value={traitName}
+              onChange={(e) => setTraitName(e.target.value)}
+              required
+            />{" "}
+            <input
+              placeholder="initial value (e.g. anti_ai)"
+              value={traitValue}
+              onChange={(e) => setTraitValue(e.target.value)}
+              required
+            />{" "}
+            <button type="submit" disabled={charBusy}>
+              define trait
+            </button>
+          </form>
+          {arc.traits.length > 0 && (
+            <form onSubmit={(e) => void onDevelop(e)} style={{ marginTop: 8 }}>
+              <select
+                value={devTrait}
+                onChange={(e) => setDevTrait(e.target.value)}
+                required
+              >
+                <option value="">trait…</option>
+                {arc.traits.map((t) => (
+                  <option key={t.trait} value={t.trait}>
+                    {t.trait} = {t.value}
+                  </option>
+                ))}
+              </select>{" "}
+              <input
+                placeholder="new value (e.g. cautiously_accepts)"
+                value={devValue}
+                onChange={(e) => setDevValue(e.target.value)}
+                required
+              />{" "}
+              <input
+                placeholder="reason (what happened?)"
+                value={devReason}
+                onChange={(e) => setDevReason(e.target.value)}
+                style={{ width: "40%" }}
+                required
+              />{" "}
+              <input
+                placeholder="episode id (optional)"
+                value={devEpisode}
+                onChange={(e) => setDevEpisode(e.target.value)}
+                style={{ width: 110 }}
+              />{" "}
+              <button type="submit" disabled={charBusy}>
+                record development
+              </button>
+            </form>
+          )}
+          {arc.history.length > 0 && (
+            <>
+              <h3>Arc history</h3>
+              <ul>
+                {arc.history.map((d) => (
+                  <li key={d.id} style={{ fontSize: 13 }}>
+                    <strong>{d.trait}</strong>:{" "}
+                    {d.from_value ?? "(new)"} → {d.to_value} — {d.reason}
+                    {d.episode_id != null && (
+                      <small> [episode {d.episode_id}]</small>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
       )}
 
       <h2>Visual identity (Sprint 5.2)</h2>

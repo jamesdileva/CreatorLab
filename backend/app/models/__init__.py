@@ -32,6 +32,7 @@ from .risk import RiskAssessment
 from .scene import Scene
 from .selection import SELECTION_METHODS, CandidateSelection
 from .series import Series, SeriesStatus
+from .simulation_scale import SCALE_LADDER, SCALE_VERSION, SimulationScaleStudy
 from .simulation import (
     RANKING_VERSION,
     REACTION_VERSION,
@@ -93,7 +94,10 @@ __all__ = [
     "Scene",
     "Series",
     "SeriesStatus",
+    "SCALE_LADDER",
+    "SCALE_VERSION",
     "SimulationRun",
+    "SimulationScaleStudy",
     "StoryThread",
     "SyntheticViewer",
     "TargetType",

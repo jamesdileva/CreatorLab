@@ -64,7 +64,7 @@ def test_get_viewer_and_404(client):
 
 def test_invalid_count_400(client):
     assert client.post("/api/audience/seed", json={"count": 0}).status_code == 400
-    assert client.post("/api/audience/seed", json={"count": 501}).status_code == 400
+    assert client.post("/api/audience/seed", json={"count": 10001}).status_code == 400
 
 
 # Roadmap verification: two viewers given identical content produce different reactions.

@@ -1197,3 +1197,37 @@ exclusion/gating, endpoint round-trip incl. organic-only note + 404).
 `npm run build` OK.
 **Commit:** Sprint 23.1 commit + push to `main`.
 
+## 2026-10-19 — Sprint 24.1 — Large-Scale Simulation
+
+**Plan:** test whether a bigger synthetic audience predicts reality better —
+25 → 100 → 500 → 1,000 → 10,000 viewers — and find the *minimum* useful size.
+Do not assume larger is better.
+**Scope:** population cap + `viewer_count` plumbing + batched memory in
+`simulation_service.py` / `audience_service.py`, `models/simulation_scale.py`,
+`services/simulation_scale.py`, `api/simulation_scale.py` (+ router
+registration), frontend `pages/SimulationScale.tsx` (+ route/nav), tests.
+**Implement:** `run_simulation` now accepts `viewer_count` (deterministic
+superset: existing seed indexes are unchanged) and an optional
+`memory_run_ids` window. Memory/familiarity lookups were batched (past runs and
+reaction watches resolved once per run instead of per viewer) so 10,000-viewer
+runs are tractable; behavior is unchanged. `seed_audience` cap raised 500 →
+10,000. A scale study simulates every episode with real view metrics at each
+ladder size against a *frozen pre-study* memory window (sizes stay comparable),
+then ranks sim scores vs real views and records pairwise directional accuracy,
+Spearman, Kendall τ, top-1 match, and a `useful` flag. Studies persist as
+`SimulationScaleStudy` with `SCALE_VERSION="scale-v1"`, sizes, episode ids,
+seed, metric, threshold, per-size simulation run ids, and
+`min_useful_viewer_count` (smallest size clearing both `min_pairs` and
+`directional_accuracy >= threshold`). Interpretation is gated by pair count.
+Endpoints: `POST/GET /api/simulation-scale/studies`,
+`GET /api/simulation-scale/studies/{id}`; `/api/simulations/run` accepts
+optional `viewer_count`. UI: run ladder, per-size validity table, minimum
+useful size, earlier studies.
+**Verify:** `pytest` → **410 passed** (5 new: viewer-count runs + determinism,
+persisted ladder + run ids, minimum-useful-size helper, validation/404s, 600-viewer
+seeding past the old cap; plus the audience cap test updated to 10,001).
+`npm run build` OK. Note: the single-process full suite was repeatedly killed by
+the environment at random points, so the suite was verified file-by-file (all 55
+files green).
+**Commit:** Sprint 24.1 commit + push to `main`.
+

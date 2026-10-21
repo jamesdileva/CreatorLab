@@ -234,12 +234,25 @@ def aggregate_reactions(reactions: list[ViewerReaction]) -> dict:
 
 
 def run_simulation(
-    db: Session, target_type: str, target_id: int, seed: int = 0
+    db: Session,
+    target_type: str,
+    target_id: int,
+    seed: int = 0,
+    viewer_count: int | None = None,
+    memory_run_ids: set[int] | list[int] | None = None,
 ) -> RunResult:
-    from .viewer_memory import effective_exposures, fatigue_penalty
+    """Run one target through the audience.
 
+    `viewer_count` grows the deterministic population (superset: seed indexes
+    are stable), and `memory_run_ids` freezes the past runs used for memory so
+    scale studies compare sizes against the same pre-study history.
+    """
     title, premise, hook, tags = _resolve_content(db, target_type, target_id)
-    viewers = seed_audience(db)
+    viewers = (
+        seed_audience(db)
+        if viewer_count is None
+        else seed_audience(db, count=viewer_count)
+    )
     memoryful = target_type == TargetType.EPISODE.value
     content_words = (
         _words(f"{title}. {premise}") | _words(hook) | _words(" ".join(tags))
@@ -248,8 +261,6 @@ def run_simulation(
     )
     creator_id: int | None = None
     if memoryful:
-        from .creator_familiarity import familiarity_for
-
         episode = db.get(Episode, target_id)
         creator_id = episode.creator_id if episode is not None else None
 
@@ -265,19 +276,26 @@ def run_simulation(
     db.add(run)
     db.flush()
 
+    fatigue_by_viewer, familiarity_by_viewer = _memory_context(
+        db,
+        viewers,
+        target_type,
+        target_id,
+        creator_id,
+        content_words,
+        memory_run_ids,
+    )
+
     reactions: list[ViewerReaction] = []
     for viewer in viewers:
-        fatigue = fatigue_penalty(
-            effective_exposures(db, viewer.id, content_words, target_type, target_id)
-        )
-        familiarity: tuple[str, float] | None = None
-        if creator_id is not None:
-            tier, affinity, _exposure = familiarity_for(
-                db, viewer.id, creator_id, target_type, target_id
-            )
-            familiarity = (tier, affinity)
         reaction = compute_reaction(
-            viewer, title, premise, hook, tags, fatigue=fatigue, familiarity=familiarity
+            viewer,
+            title,
+            premise,
+            hook,
+            tags,
+            fatigue=fatigue_by_viewer.get(viewer.id, 0.0),
+            familiarity=familiarity_by_viewer.get(viewer.id),
         )
         row = ViewerReaction(
             run_id=run.id,
@@ -296,3 +314,90 @@ def run_simulation(
         db.refresh(row)
     db.refresh(run)
     return RunResult(run=run, aggregate=aggregate_reactions(reactions), reactions=reactions)
+
+
+def _memory_context(
+    db: Session,
+    viewers: list,
+    target_type: str,
+    target_id: int,
+    creator_id: int | None,
+    content_words: set[str],
+    memory_run_ids: set[int] | list[int] | None,
+) -> tuple[dict[int, float], dict[int, tuple[str, float] | None]]:
+    """Batched equivalent of per-viewer fatigue + familiarity lookups.
+
+    Mirrors `viewer_memory.effective_exposures` and
+    `creator_familiarity.familiarity_for` exactly, but resolves past runs once
+    instead of per viewer. `memory_run_ids` restricts the history window.
+    """
+    from .creator_familiarity import strength_for, tier_for
+    from .viewer_memory import (
+        FATIGUE_CAP,
+        FATIGUE_FREE,
+        FATIGUE_SLOPE,
+        MIN_SHARED_WORDS,
+        content_words_for_run,
+    )
+
+    if not content_words and creator_id is None:
+        return {}, {}
+
+    run_query = db.query(SimulationRun).order_by(SimulationRun.id)
+    if memory_run_ids is not None:
+        allowed = set(memory_run_ids)
+        run_query = run_query.filter(SimulationRun.id.in_(allowed)) if allowed else None
+    runs = [] if run_query is None else run_query.all()
+    past_runs = [
+        r
+        for r in runs
+        if not (r.target_type == target_type and r.target_id == target_id)
+    ]
+
+    past_words = {r.id: content_words_for_run(db, r) for r in past_runs}
+    watched: dict[int, dict[int, float]] = {}
+    if past_runs:
+        rows = (
+            db.query(ViewerReaction)
+            .filter(ViewerReaction.run_id.in_([r.id for r in past_runs]))
+            .all()
+        )
+        for row in rows:
+            watched.setdefault(row.viewer_id, {})[row.run_id] = row.watch_probability
+
+    creator_episode_ids: set[int] = set()
+    if creator_id is not None:
+        creator_episode_ids = {
+            e.id for e in db.query(Episode).filter(Episode.creator_id == creator_id)
+        }
+
+    exposure_by_viewer: dict[int, float] = {}
+    for run in past_runs:
+        if run.target_type != TargetType.EPISODE.value:
+            continue
+        if run.target_id not in creator_episode_ids:
+            continue
+        for viewer_id, viewer_watch in watched.items():
+            exposure_by_viewer[viewer_id] = (
+                exposure_by_viewer.get(viewer_id, 0.0)
+                + viewer_watch.get(run.id, 0.0)
+            )
+
+    fatigue_by_viewer: dict[int, float] = {}
+    familiarity_by_viewer: dict[int, tuple[str, float] | None] = {}
+    for viewer in viewers:
+        viewer_watch = watched.get(viewer.id, {})
+        total = 0.0
+        for run_id, words in past_words.items():
+            shared = content_words & words
+            if len(shared) >= MIN_SHARED_WORDS:
+                total += viewer_watch.get(run_id, 0.0) * (len(shared) / len(content_words))
+        total = round(total, 3)
+        fatigue_by_viewer[viewer.id] = round(
+            min(FATIGUE_CAP, FATIGUE_SLOPE * max(0.0, total - FATIGUE_FREE)), 3
+        )
+        if creator_id is not None:
+            exposure = round(exposure_by_viewer.get(viewer.id, 0.0), 3)
+            familiarity_by_viewer[viewer.id] = (tier_for(exposure), strength_for(exposure))
+
+    return fatigue_by_viewer, familiarity_by_viewer

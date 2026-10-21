@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..models.viewer import AUDIENCE_VERSION, SyntheticViewer
 
 _DEFAULT_COUNT = 25
-_MAX_COUNT = 500
+_MAX_COUNT = 10000  # Phase 24 ladder tops out at 10,000 viewers
 
 _NAMES = [
     "rowan", "casey", "morgan", "ellis", "devon", "quinn", "reese", "skyler",

@@ -131,6 +131,7 @@ def preview_interest(
 class RunIn(BaseModel):
     target_type: str  # "concept" | "episode"
     target_id: int
+    viewer_count: int | None = None
 
 
 class RunRead(BaseModel):
@@ -173,7 +174,9 @@ def run_simulation_endpoint(
     payload: RunIn, db: Session = Depends(get_db)
 ) -> RunOut:
     try:
-        result = run_simulation(db, payload.target_type, payload.target_id)
+        result = run_simulation(
+            db, payload.target_type, payload.target_id, viewer_count=payload.viewer_count
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return RunOut(run=RunRead.model_validate(result.run), aggregate=result.aggregate)

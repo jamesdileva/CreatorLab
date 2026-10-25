@@ -1231,3 +1231,33 @@ the environment at random points, so the suite was verified file-by-file (all 55
 files green).
 **Commit:** Sprint 24.1 commit + push to `main`.
 
+## 2026-10-19 — Sprint 25.1 — Major Research Checkpoint
+
+**Plan:** answer the Phase 25 question — *is the simulated audience actually
+useful?* — by comparing the simulator against random selection and human judges
+across creators, topics, formats, episode types, and platforms, then turning the
+evidence into a direction (continue / use selectively / pivot).
+**Scope:** `services/major_checkpoint.py`, `models/checkpoint.py`,
+`api/checkpoint.py` (+ router registration), frontend `pages/Checkpoint.tsx`
+(+ route/nav), tests.
+**Implement:** the checkpoint folds every experiment with a stored reality gap
+into an overall bucket plus five breakdowns (creator slug, first meaningful
+topic word, short/long format, episodic/standalone type, youtube/none platform).
+For each bucket it reports simulator-vs-reality directional accuracy, Spearman,
+top-1, delta vs random (0.5), and a classification: `strong` when directional
+>= 0.65 and (when panel data exists) sim-vs-human >= 0.6; `weak` when <= 0.35 or
+sim-vs-human <= 0.45; `mixed` otherwise; `insufficient` below the guide §15
+sample gate. Human judges come from the latest `HumanPanelRanking`: simulator,
+human, and reality orders are compared over the same candidates (>= 5 required
+for the human signal to influence the verdict). The overall classification maps
+to `continue` / `selective` / `pivot` / `collect_more_data` with explicit
+outcome text. Endpoints: `GET /api/checkpoint/preview`,
+`POST /api/checkpoint` (immutable snapshot), `GET /api/checkpoint`,
+`GET /api/checkpoint/{id}`. UI: colored outcome banner, overall + per-bucket
+tables, save-snapshot button.
+**Verify:** `pytest` → **416 passed** (6 new: strong/weak/insufficient outcomes,
+human-panel three-way comparison, classification guardrails, endpoint
+round-trip incl. 404). `npm run build` OK. Suite verified file-by-file (56 files
+green) because monolithic runs keep getting killed by the environment.
+**Commit:** Sprint 25.1 commit + push to `main`.
+

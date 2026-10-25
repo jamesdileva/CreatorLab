@@ -4,6 +4,7 @@ from .audit_status import AuditStatus
 from .audience_lore import AudienceLore
 from .canon import Canon, CanonCategory
 from .character_development import CharacterDevelopment, CharacterTrait
+from .checkpoint import CHECKPOINT_VERSION, MajorCheckpoint
 from .concept import Concept, ConceptSet
 from .concept_score import ConceptScore, HumanRanking
 from .creator import Creator
@@ -61,6 +62,7 @@ __all__ = [
     "CharacterDevelopment",
     "CharacterIdentity",
     "CharacterTrait",
+    "CHECKPOINT_VERSION",
     "Concept",
     "ConceptScore",
     "ConceptSet",
@@ -78,6 +80,7 @@ __all__ = [
     "HumanPanelRanking",
     "HumanRanking",
     "MemoryType",
+    "MajorCheckpoint",
     "PublishedVideo",
     "RANKING_VERSION",
     "REACTION_VERSION",

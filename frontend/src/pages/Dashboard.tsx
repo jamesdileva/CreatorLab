@@ -20,6 +20,7 @@ export default function Dashboard() {
         <Link to="/series">Series</Link>{" · "}
         <Link to="/simulation">Simulation</Link>{" · "}
         <Link to="/simulation-scale">Scale study</Link>{" · "}
+        <Link to="/checkpoint">Research checkpoint</Link>{" · "}
         <Link to="/review">Review queue</Link>{" · "}
         <Link to="/youtube">YouTube</Link>{" · "}
         <Link to="/analytics">Analytics</Link>{" · "}

@@ -15,6 +15,7 @@ import AudienceLore from "./pages/AudienceLore";
 import Audience from "./pages/Audience";
 import Emulator from "./pages/Emulator";
 import Competition from "./pages/Competition";
+import Checkpoint from "./pages/Checkpoint";
 import SimulationScale from "./pages/SimulationScale";
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/lore" element={<AudienceLore />} />
       <Route path="/simulation" element={<Audience />} />
       <Route path="/simulation-scale" element={<SimulationScale />} />
+      <Route path="/checkpoint" element={<Checkpoint />} />
       <Route path="/competition" element={<Competition />} />
       <Route path="/emulator" element={<Emulator />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
